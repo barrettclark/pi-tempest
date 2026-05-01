@@ -92,6 +92,17 @@ async def _lightning_1h(db: aiosqlite.Connection) -> tuple[int, Optional[int], O
     return count, None, None
 
 
+def _compute_rain_rate_in_hr(
+    rain_mm, report_interval_min
+):
+    """Rain rate in in/hr from accumulated mm in one reporting interval."""
+    if not rain_mm:
+        return None
+    interval = report_interval_min or 1
+    rate_mm_hr = (rain_mm / interval) * 60
+    return units.mm_to_in(rate_mm_hr) if rate_mm_hr > 0 else None
+
+
 @router.get("/current", response_model=CurrentResponse)
 async def get_current(db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
@@ -108,7 +119,7 @@ async def get_current(db: aiosqlite.Connection = Depends(get_db)):
             humidity_pct=None, pressure_inhg=None, pressure_trend="steady",
             wind_avg_mph=None, wind_gust_mph=None, wind_lull_mph=None,
             wind_direction_deg=None, wind_direction_cardinal=None,
-            rain_today_in=0.0, uv_index=None, solar_radiation_wm2=None,
+            rain_today_in=0.0, rain_rate_in_hr=None, uv_index=None, solar_radiation_wm2=None,
             lightning_count_1h=0, lightning_last_epoch=None,
             lightning_last_distance_km=None, battery_v=None, rapid_wind=None,
         )
@@ -149,6 +160,9 @@ async def get_current(db: aiosqlite.Connection = Depends(get_db)):
         wind_direction_deg=row["wind_direction"],
         wind_direction_cardinal=units.degrees_to_cardinal(row["wind_direction"]),
         rain_today_in=rain_today,
+        rain_rate_in_hr=_compute_rain_rate_in_hr(
+            row["rain_accumulated"], row["report_interval"]
+        ) if row["precipitation_type"] else None,
         uv_index=row["uv"],
         solar_radiation_wm2=row["solar_radiation"],
         lightning_count_1h=lightning_count,

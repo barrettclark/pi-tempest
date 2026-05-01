@@ -25,6 +25,7 @@ class CurrentResponse(BaseModel):
     wind_direction_deg: Optional[int]
     wind_direction_cardinal: Optional[str]
     rain_today_in: float
+    rain_rate_in_hr: Optional[float]
     uv_index: Optional[float]
     solar_radiation_wm2: Optional[float]
     lightning_count_1h: int
