@@ -7,3 +7,6 @@ data/
 *.db
 .DS_Store
 .superpowers/brainstorm/
+.claude/
+TODO.txt
+*.txt
