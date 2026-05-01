@@ -9,124 +9,107 @@
 </head>
 <body>
 
+<!-- ── Tab bar ─────────────────────────────────────────── -->
+<div id="tabbar">
+  <button class="tab active" id="tab-now">Now</button>
+  <button class="tab" id="tab-forecast">Forecast</button>
+  <div class="tab-spacer"></div>
+  <div id="tabbar-time">—</div>
+</div>
+
+<!-- ── NOW panel ──────────────────────────────────────── -->
+<div id="panel-now" class="panel">
+
+  <div id="left-panel">
+    <div id="cond-icon">—</div>
+    <div id="cond-desc">—</div>
+    <div id="now-temp">—</div>
+    <div id="now-sublabel">—</div>
+    <div id="rain-intensity" class="hidden">—</div>
+    <div id="wind-gauge-wrap">
+      <svg id="wind-gauge" viewBox="0 0 124 124" width="124" height="124"></svg>
+      <div id="wind-sub">—</div>
+    </div>
+  </div>
+
+  <div id="right-panel">
+
+    <div class="row row-temp">
+      <div class="row-label">Temperature</div>
+      <div id="temp-val">—</div>
+      <div id="temp-meta">—</div>
+      <div class="spark-wrap"><canvas id="sp-temp"></canvas></div>
+    </div>
+
+    <div class="row row-upcoming">
+      <div class="row-label">Upcoming</div>
+      <div id="upcoming-inner"></div>
+    </div>
+
+    <div class="row row-rain">
+      <div class="row-label">Rain</div>
+      <div id="rain-totals"></div>
+      <div class="spark-wrap spark-rain"><canvas id="sp-rain"></canvas></div>
+    </div>
+
+    <div class="row row-pressure">
+      <div class="row-label">Pressure</div>
+      <div id="pressure-val">—</div>
+      <div id="pressure-trend">—</div>
+      <div class="spark-wrap"><canvas id="sp-pressure"></canvas></div>
+    </div>
+
+    <div class="row row-uvaqi">
+      <div class="row-label">UV · Solar · AQI</div>
+      <svg id="uv-gauge" viewBox="0 0 52 52" width="44" height="44"></svg>
+      <div id="uv-val">—</div>
+      <div class="row-divider"></div>
+      <div id="solar-val">—</div>
+      <div class="spark-wrap spark-solar"><canvas id="sp-solar"></canvas></div>
+      <div class="row-divider"></div>
+      <svg id="aqi-gauge" viewBox="0 0 52 52" width="44" height="44"></svg>
+      <div id="aqi-val">—</div>
+      <div id="aqi-pollutants">—</div>
+    </div>
+
+    <div class="row row-lightning">
+      <div class="row-label">Lightning</div>
+      <div id="lightning-rate">—</div>
+      <div id="lightning-last">—</div>
+      <div id="lightning-totals">—</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── FORECAST panel ─────────────────────────────────── -->
+<div id="panel-forecast" class="panel hidden">
+
+  <div id="hourly-section">
+    <div class="section-label">Hourly · Next 24 hours</div>
+    <div id="hourly-cards"></div>
+  </div>
+
+  <div id="daily-moon-section">
+    <div id="daily-section">
+      <div class="section-label">5-Day Forecast</div>
+      <div id="daily-cards"></div>
+    </div>
+    <div id="moon-panel"></div>
+  </div>
+
+</div>
+
+<!-- ── Status bar ─────────────────────────────────────── -->
+<div id="statusbar">
+  <span><span id="status-dot" class="dot"></span><span id="status-time">—</span></span>
+  <span>Coppell, TX</span>
+  <span id="status-obs">—</span>
+</div>
+
 <div id="loading">
   <div>Tempest Weather</div>
   <div id="loading-sub">Loading…</div>
-</div>
-
-<!--
-  Single-page dashboard: 6 metric rows + status bar.
-  Each row: [190px stat block] [834px chart area]
-  Row heights sum to 578px; status bar is 22px = 600px total.
--->
-<div id="dashboard">
-
-  <!-- ══ ROW 1 — TEMPERATURE ══════════════════════════════════ -->
-  <div class="row row-temperature">
-    <div class="stat">
-      <div class="stat-title">Temperature</div>
-      <div class="stat-primary" id="cur-temp">—</div>
-      <div class="stat-secondary" id="cur-feels"></div>
-      <div class="stat-secondary" id="cur-dewpoint"></div>
-      <div class="stat-secondary" id="cur-humidity"></div>
-      <div class="stat-secondary" id="temp-range" style="margin-top:4px;font-size:10px"></div>
-    </div>
-    <div class="chart-area">
-      <canvas id="chart-temperature"></canvas>
-    </div>
-  </div>
-
-  <!-- ══ ROW 2 — WIND ════════════════════════════════════════ -->
-  <div class="row row-wind">
-    <div class="stat">
-      <div class="stat-title">Wind</div>
-      <div style="display:flex;align-items:baseline;gap:6px">
-        <div class="stat-primary-md" id="cur-wind-avg">—</div>
-        <div class="stat-secondary" id="cur-wind-unit">mph</div>
-        <div class="stat-secondary" style="font-size:14px;color:var(--text)" id="cur-wind-dir"></div>
-      </div>
-      <div class="stat-secondary" id="cur-wind-gust"></div>
-      <div class="stat-secondary" id="cur-wind-lull"></div>
-      <div class="stat-secondary" id="wind-peak" style="font-size:10px;margin-top:2px"></div>
-    </div>
-    <div class="chart-area">
-      <canvas id="chart-wind"></canvas>
-    </div>
-  </div>
-
-  <!-- ══ ROW 3 — RAIN ═════════════════════════════════════════ -->
-  <div class="row row-rain">
-    <div class="stat">
-      <div class="stat-title">Precipitation</div>
-      <div style="display:flex;align-items:baseline;gap:5px">
-        <div class="stat-primary-md" id="cur-rain-today">—</div>
-        <div class="stat-secondary" id="cur-rain-label"></div>
-      </div>
-      <div class="stat-secondary" id="rain-24h-total" style="font-size:10px;margin-top:2px"></div>
-      <div class="stat-secondary" style="font-size:10px;color:var(--text-dim);margin-top:3px">
-        Bars: actual&nbsp;&nbsp;Line: chance %
-      </div>
-    </div>
-    <div class="chart-area">
-      <canvas id="chart-rain"></canvas>
-    </div>
-  </div>
-
-  <!-- ══ ROW 4 — PRESSURE ═════════════════════════════════════ -->
-  <div class="row row-pressure">
-    <div class="stat">
-      <div class="stat-title">Barometer</div>
-      <div style="display:flex;align-items:baseline;gap:5px">
-        <div class="stat-primary-sm" id="cur-pressure">—</div>
-        <div class="stat-secondary">inHg</div>
-      </div>
-      <div id="cur-pressure-trend" class="stat-secondary trend-steady">► Steady</div>
-    </div>
-    <div class="chart-area">
-      <canvas id="chart-pressure"></canvas>
-    </div>
-  </div>
-
-  <!-- ══ ROW 5 — SOLAR / UV ════════════════════════════════════ -->
-  <div class="row row-solar">
-    <div class="stat">
-      <div class="stat-title">Solar / UV</div>
-      <div class="stat-secondary" id="cur-solar" style="font-size:16px;color:var(--solar)">—</div>
-      <div class="stat-secondary" id="cur-uv"    style="font-size:14px;color:#ff6b9d;margin-top:2px">—</div>
-      <div class="stat-secondary" id="solar-peak" style="font-size:10px;margin-top:3px"></div>
-      <div class="stat-secondary" id="uv-peak"    style="font-size:10px"></div>
-    </div>
-    <div class="chart-area">
-      <canvas id="chart-solar"></canvas>
-    </div>
-  </div>
-
-  <!-- ══ ROW 6 — LIGHTNING ════════════════════════════════════ -->
-  <div class="row row-lightning">
-    <div class="stat" style="flex-direction:row;align-items:center;gap:10px;padding:4px 10px">
-      <div>
-        <div class="stat-title">Lightning</div>
-        <div style="display:flex;align-items:baseline;gap:6px">
-          <div style="font-size:22px;font-weight:300;color:var(--warn)" id="cur-lightning">0/hr</div>
-        </div>
-      </div>
-      <div class="stat-secondary" id="cur-lightning-last" style="font-size:11px"></div>
-    </div>
-    <div class="chart-area">
-      <canvas id="chart-lightning"></canvas>
-    </div>
-  </div>
-
-</div><!-- /dashboard -->
-
-<!-- ── Status bar ────────────────────────────────────────── -->
-<div id="statusbar">
-  <span>
-    <span id="status-dot"></span>
-    <span id="status-time">—</span>
-  </span>
-  <span>Coppell, TX</span>
-  <span id="status-backfill"></span>
 </div>
 
 <script type="module" src="/js/app.js"></script>
