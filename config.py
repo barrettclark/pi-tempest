@@ -11,6 +11,9 @@ UDP_PORT = int(os.environ.get("UDP_PORT", "50222"))
 API_HOST = os.environ.get("API_HOST", "127.0.0.1")
 API_PORT = int(os.environ.get("API_PORT", "8000"))
 TIMEZONE = os.environ.get("TZ", "America/Chicago")
+AIRNOW_API_KEY = os.environ.get("AIRNOW_API_KEY", "")
+LAT = os.environ.get("LAT", "32.97")
+LON = os.environ.get("LON", "-96.99")
 
 WEATHERFLOW_API_BASE = "https://swd.weatherflow.com/swd/rest"
 BACKFILL_DAYS = 30
