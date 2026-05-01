@@ -213,7 +213,17 @@ html, body {
 }
 
 .spark-rain   { height: 36px; }
-.spark-solar  { height: 36px; max-width: 160px; flex: none; }
+.spark-solar  { height: 36px; }
+
+/* ── UV·Solar·AQI sections ──────────────────────────── */
+.uvaqi-sec {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  min-width: 0;
+}
 
 /* ── Temperature row specifics ──────────────────────── */
 #temp-val {

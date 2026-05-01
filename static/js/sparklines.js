@@ -39,6 +39,7 @@ export function createBarSparkline(canvasEl, color) {
         backgroundColor: color,
         borderRadius: 1,
         barPercentage: 0.8,
+        maxBarThickness: 10,
       }],
     },
     options: BASE_OPTS,
