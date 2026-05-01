@@ -1,0 +1,19 @@
+[Unit]
+Description=WeatherFlow Tempest UDP Collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=barrettclark
+WorkingDirectory=/home/barrettclark/pi-tempest
+EnvironmentFile=/home/barrettclark/pi-tempest/.env
+ExecStart=/home/barrettclark/pi-tempest/.venv/bin/python -m collector.udp_listener
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tempest-collector
+
+[Install]
+WantedBy=multi-user.target

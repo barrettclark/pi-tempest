@@ -1,0 +1,23 @@
+[Unit]
+Description=WeatherFlow Tempest FastAPI Server
+After=network.target tempest-collector.service
+Wants=tempest-collector.service
+
+[Service]
+Type=simple
+User=barrettclark
+WorkingDirectory=/home/barrettclark/pi-tempest
+EnvironmentFile=/home/barrettclark/pi-tempest/.env
+ExecStart=/home/barrettclark/pi-tempest/.venv/bin/uvicorn api.main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 1 \
+    --log-level info
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tempest-api
+
+[Install]
+WantedBy=multi-user.target

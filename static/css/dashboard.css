@@ -1,0 +1,185 @@
+/* ============================================================
+   Tempest Dashboard — 1024×600, single-page, no tabs
+   Six metric rows, each with a stat block + blended chart.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0a1628;
+  --bg-row:     #0d1e35;
+  --bg-alt:     #0b1a2e;
+  --accent:     #00c8ff;
+  --accent2:    #00e5b0;
+  --warn:       #ffb347;
+  --solar:      #ffd166;
+  --rain:       #74b0ff;
+  --lightning:  #ffb347;
+  --danger:     #ff4e4e;
+  --forecast:   rgba(255,255,255,0.55);
+  --text:       #e8f0fe;
+  --text-dim:   #5a7fa8;
+  --border:     #162d4a;
+  --now-line:   rgba(255,255,255,0.6);
+  --status-h:   22px;
+
+  --stat-w:     190px;
+}
+
+html, body {
+  width: 1024px;
+  height: 600px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── Main layout ──────────────────────────────────────────── */
+#dashboard {
+  display: flex;
+  flex-direction: column;
+  width: 1024px;
+  height: calc(600px - var(--status-h));
+}
+
+/* ── Metric rows ──────────────────────────────────────────── */
+.row {
+  display: flex;
+  flex-direction: row;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.row:last-child { border-bottom: none; }
+.row:nth-child(even) { background: var(--bg-alt); }
+
+/* Row heights — total must equal 600 - 22 = 578px */
+.row-temperature { flex: 0 0 148px; }
+.row-wind        { flex: 0 0 108px; }
+.row-rain        { flex: 0 0 106px; }
+.row-pressure    { flex: 0 0 90px;  }
+.row-solar       { flex: 0 0 86px;  }
+.row-lightning   { flex: 0 0 40px;  }
+
+/* ── Stat block ───────────────────────────────────────────── */
+.stat {
+  flex: 0 0 var(--stat-w);
+  padding: 8px 10px 6px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.stat-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+.stat-primary {
+  font-size: 42px;
+  font-weight: 200;
+  line-height: 1;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* Smaller primary for less-important rows */
+.stat-primary-md {
+  font-size: 30px;
+  font-weight: 200;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.stat-primary-sm {
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.stat-secondary {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.stat-secondary b { color: var(--text); font-weight: 600; }
+
+.trend-rising  { color: var(--warn); }
+.trend-falling { color: var(--rain); }
+.trend-steady  { color: var(--text-dim); }
+
+/* ── Chart area ───────────────────────────────────────────── */
+.chart-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  padding: 6px 8px 4px 2px;
+}
+
+.chart-area canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── Status bar ───────────────────────────────────────────── */
+#statusbar {
+  height: var(--status-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: #060f1c;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+#status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent2);
+  margin-right: 6px;
+  animation: pulse 2s infinite;
+}
+#status-dot.stale { background: var(--warn); }
+#status-dot.error { background: var(--danger); animation: none; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
+/* ── Loading overlay ──────────────────────────────────────── */
+#loading {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--text-dim);
+  z-index: 999;
+  flex-direction: column;
+  gap: 12px;
+}
+#loading.hidden { display: none; }
+#loading-sub { font-size: 13px; color: var(--text-dim); opacity: 0.6; }

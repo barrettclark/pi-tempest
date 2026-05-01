@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Tempest Weather
+Comment=Launch the Tempest weather dashboard
+Exec=/home/barrettclark/pi-tempest/autostart/chromium-kiosk.sh
+Icon=weather-few-clouds
+Terminal=false
+Categories=Utility;

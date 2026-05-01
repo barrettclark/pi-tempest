@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1024, initial-scale=1.0">
+  <title>Tempest</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="loading">
+  <div>Tempest Weather</div>
+  <div id="loading-sub">Loading…</div>
+</div>
+
+<!--
+  Single-page dashboard: 6 metric rows + status bar.
+  Each row: [190px stat block] [834px chart area]
+  Row heights sum to 578px; status bar is 22px = 600px total.
+-->
+<div id="dashboard">
+
+  <!-- ══ ROW 1 — TEMPERATURE ══════════════════════════════════ -->
+  <div class="row row-temperature">
+    <div class="stat">
+      <div class="stat-title">Temperature</div>
+      <div class="stat-primary" id="cur-temp">—</div>
+      <div class="stat-secondary" id="cur-feels"></div>
+      <div class="stat-secondary" id="cur-dewpoint"></div>
+      <div class="stat-secondary" id="cur-humidity"></div>
+      <div class="stat-secondary" id="temp-range" style="margin-top:4px;font-size:10px"></div>
+    </div>
+    <div class="chart-area">
+      <canvas id="chart-temperature"></canvas>
+    </div>
+  </div>
+
+  <!-- ══ ROW 2 — WIND ════════════════════════════════════════ -->
+  <div class="row row-wind">
+    <div class="stat">
+      <div class="stat-title">Wind</div>
+      <div style="display:flex;align-items:baseline;gap:6px">
+        <div class="stat-primary-md" id="cur-wind-avg">—</div>
+        <div class="stat-secondary" id="cur-wind-unit">mph</div>
+        <div class="stat-secondary" style="font-size:14px;color:var(--text)" id="cur-wind-dir"></div>
+      </div>
+      <div class="stat-secondary" id="cur-wind-gust"></div>
+      <div class="stat-secondary" id="cur-wind-lull"></div>
+      <div class="stat-secondary" id="wind-peak" style="font-size:10px;margin-top:2px"></div>
+    </div>
+    <div class="chart-area">
+      <canvas id="chart-wind"></canvas>
+    </div>
+  </div>
+
+  <!-- ══ ROW 3 — RAIN ═════════════════════════════════════════ -->
+  <div class="row row-rain">
+    <div class="stat">
+      <div class="stat-title">Precipitation</div>
+      <div style="display:flex;align-items:baseline;gap:5px">
+        <div class="stat-primary-md" id="cur-rain-today">—</div>
+        <div class="stat-secondary" id="cur-rain-label"></div>
+      </div>
+      <div class="stat-secondary" id="rain-24h-total" style="font-size:10px;margin-top:2px"></div>
+      <div class="stat-secondary" style="font-size:10px;color:var(--text-dim);margin-top:3px">
+        Bars: actual&nbsp;&nbsp;Line: chance %
+      </div>
+    </div>
+    <div class="chart-area">
+      <canvas id="chart-rain"></canvas>
+    </div>
+  </div>
+
+  <!-- ══ ROW 4 — PRESSURE ═════════════════════════════════════ -->
+  <div class="row row-pressure">
+    <div class="stat">
+      <div class="stat-title">Barometer</div>
+      <div style="display:flex;align-items:baseline;gap:5px">
+        <div class="stat-primary-sm" id="cur-pressure">—</div>
+        <div class="stat-secondary">inHg</div>
+      </div>
+      <div id="cur-pressure-trend" class="stat-secondary trend-steady">► Steady</div>
+    </div>
+    <div class="chart-area">
+      <canvas id="chart-pressure"></canvas>
+    </div>
+  </div>
+
+  <!-- ══ ROW 5 — SOLAR / UV ════════════════════════════════════ -->
+  <div class="row row-solar">
+    <div class="stat">
+      <div class="stat-title">Solar / UV</div>
+      <div class="stat-secondary" id="cur-solar" style="font-size:16px;color:var(--solar)">—</div>
+      <div class="stat-secondary" id="cur-uv"    style="font-size:14px;color:#ff6b9d;margin-top:2px">—</div>
+      <div class="stat-secondary" id="solar-peak" style="font-size:10px;margin-top:3px"></div>
+      <div class="stat-secondary" id="uv-peak"    style="font-size:10px"></div>
+    </div>
+    <div class="chart-area">
+      <canvas id="chart-solar"></canvas>
+    </div>
+  </div>
+
+  <!-- ══ ROW 6 — LIGHTNING ════════════════════════════════════ -->
+  <div class="row row-lightning">
+    <div class="stat" style="flex-direction:row;align-items:center;gap:10px;padding:4px 10px">
+      <div>
+        <div class="stat-title">Lightning</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <div style="font-size:22px;font-weight:300;color:var(--warn)" id="cur-lightning">0/hr</div>
+        </div>
+      </div>
+      <div class="stat-secondary" id="cur-lightning-last" style="font-size:11px"></div>
+    </div>
+    <div class="chart-area">
+      <canvas id="chart-lightning"></canvas>
+    </div>
+  </div>
+
+</div><!-- /dashboard -->
+
+<!-- ── Status bar ────────────────────────────────────────── -->
+<div id="statusbar">
+  <span>
+    <span id="status-dot"></span>
+    <span id="status-time">—</span>
+  </span>
+  <span>Coppell, TX</span>
+  <span id="status-backfill"></span>
+</div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
