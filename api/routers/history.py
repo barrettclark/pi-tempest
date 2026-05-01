@@ -58,9 +58,18 @@ async def get_temperature_history(
 
 @router.get("/rain")
 async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    import config as _config
+
     now = int(time.time())
     since_hourly = now - 86400       # last 24h for hourly
     since_daily  = now - 30 * 86400  # last 30 days for daily
+
+    local_tz  = ZoneInfo(_config.TIMEZONE)
+    now_local = datetime.now(tz=local_tz)
+    month_start = int(now_local.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
+    year_start  = int(now_local.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
 
     # Hourly buckets
     cursor = await db.execute(
@@ -92,11 +101,29 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
     )
     daily_rows = await cursor.fetchall()
 
+    # Monthly total
+    cursor = await db.execute(
+        "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :since AND rain_accumulated IS NOT NULL",
+        {"since": month_start},
+    )
+    row = await cursor.fetchone()
+    rain_month_in = round(units.mm_to_in(row[0] or 0), 2)
+
+    # Yearly total
+    cursor = await db.execute(
+        "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :since AND rain_accumulated IS NOT NULL",
+        {"since": year_start},
+    )
+    row = await cursor.fetchone()
+    rain_year_in = round(units.mm_to_in(row[0] or 0), 2)
+
     return {
         "hourly_labels":  [r[0] for r in hourly_rows],
         "hourly_rain_in": [round(units.mm_to_in(r[1]), 3) for r in hourly_rows],
         "daily_labels":   [r[0] for r in daily_rows],
         "daily_rain_in":  [round(units.mm_to_in(r[1]), 3) for r in daily_rows],
+        "rain_month_in":  rain_month_in,
+        "rain_year_in":   rain_year_in,
     }
 
 

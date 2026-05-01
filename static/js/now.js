@@ -46,7 +46,7 @@ export function initNow() {
 }
 
 export async function refreshNow() {
-  const [cur, tempH, rainH, pressH, solarH, forecast, aqi] = await Promise.allSettled([
+  const [cur, tempH, rainH, pressH, solarH, forecast, aqi, moonR] = await Promise.allSettled([
     fetch('/api/current').then(r => r.json()),
     fetch('/api/history/temperature?hours=24').then(r => r.json()),
     fetch('/api/history/rain').then(r => r.json()),
@@ -54,13 +54,14 @@ export async function refreshNow() {
     fetch('/api/history/solar').then(r => r.json()),
     fetch('/api/forecast').then(r => r.json()),
     fetch('/api/aqi').then(r => r.json()),
+    fetch('/api/moon').then(r => r.json()),
   ]);
 
   const c = cur.status === 'fulfilled' ? cur.value : null;
   const fc = forecast.status === 'fulfilled' ? forecast.value : { hourly: [], daily: [] };
 
   if (c) {
-    _updateLeft(c);
+    _updateLeft(c, fc.hourly);
     _updateStatusBar(c);
   }
 
@@ -74,12 +75,15 @@ export async function refreshNow() {
   if (c && pressH.status === 'fulfilled') _updatePressureRow(c, pressH.value);
   if (c && solarH.status === 'fulfilled') _updateSolarRow(c, solarH.value);
   if (aqi.status === 'fulfilled') _updateAqiRow(aqi.value, c);
-  if (c) _updateLightningRow(c);
+  if (c) _updateLightningCompact(c);
+  _updateDailyRow(fc.daily ?? []);
+  if (moonR.status === 'fulfilled') _updateMoonMini(moonR.value);
 }
 
-function _updateLeft(c) {
-  document.getElementById('cond-icon').textContent = iconEmoji(null);
-  document.getElementById('cond-desc').textContent = '';
+function _updateLeft(c, hourly = []) {
+  const h0 = hourly[0];
+  document.getElementById('cond-icon').textContent = iconEmoji(h0?.icon ?? null);
+  document.getElementById('cond-desc').textContent = h0?.conditions ?? '';
   document.getElementById('now-temp').textContent =
     c.temperature_f != null ? `${c.temperature_f.toFixed(1)}°` : '—';
   document.getElementById('now-sublabel').textContent =
@@ -123,10 +127,12 @@ function _updateUpcoming(hourly) {
 
 function _updateRainRow(rainData, c) {
   const today = c?.rain_today_in ?? 0;
-  const html = [
-    `<div class="rain-total"><div class="rain-val">${today.toFixed(2)}"</div><div class="rain-lbl">Today</div></div>`,
-  ].join('');
-  document.getElementById('rain-totals').innerHTML = html;
+  const month = rainData.rain_month_in ?? 0;
+  const year  = rainData.rain_year_in  ?? 0;
+  document.getElementById('rain-totals').innerHTML =
+    `<div class="rain-total"><div class="rain-val">${today.toFixed(2)}"</div><div class="rain-lbl">Today</div></div>` +
+    `<div class="rain-total"><div class="rain-val">${month.toFixed(2)}"</div><div class="rain-lbl">Month</div></div>` +
+    `<div class="rain-total"><div class="rain-val">${year.toFixed(2)}"</div><div class="rain-lbl">Year</div></div>`;
   updateBarSparkline(sp.rain, rainData.hourly_labels, rainData.hourly_rain_in);
 }
 
@@ -137,10 +143,14 @@ function _updatePressureRow(c, histData) {
 
   const trendEl = document.getElementById('pressure-trend');
   const trend = c.pressure_trend ?? 'steady';
-  const trendMap = { rising: '▲ Rising', falling: '▼ Falling', steady: '► Steady' };
-  const classMap = { rising: 'trend-rising', falling: 'trend-falling', steady: 'trend-steady' };
-  trendEl.textContent = trendMap[trend] ?? '► Steady';
-  trendEl.className = classMap[trend] ?? 'trend-steady';
+  const trendMap = {
+    rising:  { sym: '▲', label: 'Rising',  desc: 'Improving',   cls: 'trend-rising'  },
+    falling: { sym: '▼', label: 'Falling', desc: 'Worsening',   cls: 'trend-falling' },
+    steady:  { sym: '►', label: 'Steady',  desc: 'No change',   cls: 'trend-steady'  },
+  };
+  const t = trendMap[trend] ?? trendMap.steady;
+  trendEl.innerHTML = `${t.sym} ${t.label} <span style="color:#5a7fa8">· ${t.desc}</span>`;
+  trendEl.className = t.cls;
 
   updateLineSparkline(sp.pressure, histData.labels, histData.pressure_inhg);
 }
@@ -178,13 +188,47 @@ function _updateAqiRow(aqiData, c) {
     (oz  != null ? `O₃: ${oz}` : '');
 }
 
-function _updateLightningRow(c) {
-  document.getElementById('lightning-rate').textContent =
-    `${c.lightning_count_1h ?? 0} /hr`;
+function _updateLightningCompact(c) {
+  const rate = c.lightning_count_1h ?? 0;
   const last = c.lightning_last_epoch;
-  document.getElementById('lightning-last').textContent = last
-    ? `Last: ${c.lightning_last_distance_km ?? '?'} km · ${fmtAgo(last)}`
+  const lastStr = last
+    ? `${c.lightning_last_distance_km ?? '?'} km · ${fmtAgo(last)}`
     : 'No recent strikes';
+  document.getElementById('lightning-compact').innerHTML =
+    `<span class="lc-rate">${rate}</span> <span style="color:#5a7fa8">/hr</span><br>${lastStr}`;
+}
+
+function _updateDailyRow(daily) {
+  const container = document.getElementById('daily-cards-main');
+  if (!container) return;
+  container.innerHTML = '';
+  const today = new Date().toDateString();
+  daily.slice(0, 6).forEach(d => {
+    const isToday = d.date_epoch
+      ? new Date(d.date_epoch * 1000).toDateString() === today
+      : false;
+    const dayLabel = isToday ? 'Today' : (d.date_epoch
+      ? new Date(d.date_epoch * 1000).toLocaleDateString('en-US', { weekday: 'short' })
+      : '—');
+    const card = document.createElement('div');
+    card.className = 'main-day-card' + (isToday ? ' today-card' : '');
+    card.innerHTML =
+      `<div class="mdc-day">${dayLabel}</div>` +
+      `<div class="mdc-icon">${iconEmoji(d.icon)}</div>` +
+      `<div class="mdc-hilo">${d.high_f != null ? Math.round(d.high_f) : '—'}°` +
+      `<span class="mdc-lo"> / ${d.low_f != null ? Math.round(d.low_f) : '—'}°</span></div>` +
+      `<div class="mdc-rain">${d.precip_prob_pct ?? 0}%</div>`;
+    container.appendChild(card);
+  });
+}
+
+function _updateMoonMini(moon) {
+  const el = document.getElementById('moon-mini');
+  if (!el || !moon) return;
+  el.innerHTML =
+    `<div class="moon-emoji">${moon.emoji ?? '🌙'}</div>` +
+    `<div class="moon-name">${moon.phase_name ?? '—'}</div>` +
+    `<div class="moon-times">${moon.moonrise ?? '—'} ↑<br>${moon.moonset ?? '—'} ↓</div>`;
 }
 
 function _updateStatusBar(c) {

@@ -9,10 +9,9 @@
 </head>
 <body>
 
-<!-- ── Tab bar ─────────────────────────────────────────── -->
+<!-- ── Tab bar (header + clock) ───────────────────────── -->
 <div id="tabbar">
   <button class="tab active" id="tab-now">Now</button>
-  <button class="tab" id="tab-forecast">Forecast</button>
   <div class="tab-spacer"></div>
   <div id="tabbar-time">—</div>
 </div>
@@ -30,6 +29,7 @@
       <svg id="wind-gauge" viewBox="0 0 124 124" width="124" height="124"></svg>
       <div id="wind-sub">—</div>
     </div>
+    <div id="moon-mini">—</div>
   </div>
 
   <div id="right-panel">
@@ -46,10 +46,12 @@
       <div id="upcoming-inner"></div>
     </div>
 
-    <div class="row row-rain">
-      <div class="row-label">Rain</div>
+    <div class="row row-rainlightning">
+      <div class="row-label">Rain · Lightning</div>
       <div id="rain-totals"></div>
       <div class="spark-wrap spark-rain"><canvas id="sp-rain"></canvas></div>
+      <div class="row-divider"></div>
+      <div id="lightning-compact">—</div>
     </div>
 
     <div class="row row-pressure">
@@ -78,32 +80,12 @@
       </div>
     </div>
 
-    <div class="row row-lightning">
-      <div class="row-label">Lightning</div>
-      <div id="lightning-rate">—</div>
-      <div id="lightning-last">—</div>
-      <div id="lightning-totals">—</div>
+    <div class="row row-daily">
+      <div class="row-label">5-Day Forecast</div>
+      <div id="daily-cards-main"></div>
     </div>
 
   </div>
-</div>
-
-<!-- ── FORECAST panel ─────────────────────────────────── -->
-<div id="panel-forecast" class="panel hidden">
-
-  <div id="hourly-section">
-    <div class="section-label">Hourly · Next 24 hours</div>
-    <div id="hourly-cards"></div>
-  </div>
-
-  <div id="daily-moon-section">
-    <div id="daily-section">
-      <div class="section-label">5-Day Forecast</div>
-      <div id="daily-cards"></div>
-    </div>
-    <div id="moon-panel"></div>
-  </div>
-
 </div>
 
 <!-- ── Status bar ─────────────────────────────────────── -->

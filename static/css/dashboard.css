@@ -149,6 +149,17 @@ html, body {
   gap: 14px;
 }
 
+/* ── Moon mini (left panel) ─────────────────────────── */
+#moon-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+#moon-mini .moon-emoji { font-size: 26px; line-height: 1; }
+#moon-mini .moon-name  { font-size: 10px; color: var(--text); font-weight: 300; }
+#moon-mini .moon-times { font-size: 9px; color: var(--text-dim); text-align: center; line-height: 1.6; }
+
 /* ── RIGHT PANEL ────────────────────────────────────── */
 #right-panel {
   flex: 1;
@@ -171,12 +182,12 @@ html, body {
 .row:nth-child(even) { background: var(--bg-alt); }
 
 /* Row heights — total = 548px */
-.row-temp     { height: 110px; }
-.row-upcoming { height: 130px; padding: 0; }
-.row-rain     { height: 83px; }
-.row-pressure { height: 72px; }
-.row-uvaqi    { height: 78px; }
-.row-lightning{ height: 75px; }
+.row-temp         { height: 110px; }
+.row-upcoming     { height: 130px; padding: 0; }
+.row-rainlightning{ height: 75px; }
+.row-pressure     { height: 72px; }
+.row-uvaqi        { height: 78px; }
+.row-daily        { height: 83px; padding: 0 8px; }
 
 .row-label {
   position: absolute;
@@ -251,10 +262,10 @@ html, body {
   overflow: hidden;
 }
 
-/* ── Rain row ───────────────────────────────────────── */
+/* ── Rain · Lightning row ───────────────────────────── */
 #rain-totals {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   margin-top: 14px;
   align-self: flex-start;
   flex-shrink: 0;
@@ -262,7 +273,7 @@ html, body {
 
 .rain-total { text-align: center; }
 .rain-total .rain-val {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 200;
   color: var(--rain);
   line-height: 1;
@@ -272,6 +283,19 @@ html, body {
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+#lightning-compact {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  white-space: nowrap;
+}
+#lightning-compact .lc-rate {
+  font-size: 16px;
+  font-weight: 200;
+  color: var(--warn);
 }
 
 /* ── Pressure row ───────────────────────────────────── */
@@ -307,166 +331,39 @@ html, body {
 #aqi-val .aqi-cat   { font-size: 9px;  }
 #aqi-pollutants    { font-size: 9px;  color: var(--text-dim); line-height: 1.8; }
 
-/* ── Lightning row ──────────────────────────────────── */
-#lightning-rate {
-  font-size: 22px;
-  font-weight: 200;
-  color: var(--warn);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-#lightning-last {
-  font-size: 10px;
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
-
-#lightning-totals {
-  margin-left: auto;
-  font-size: 10px;
-  color: var(--text-dim);
-  text-align: right;
-  flex-shrink: 0;
-}
-
-/* ── FORECAST PANEL ─────────────────────────────────── */
-#panel-forecast {
-  flex-direction: column;
-}
-
-#hourly-section {
-  flex: 0 0 230px;
-  border-bottom: 2px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.section-label {
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-  padding: 5px 14px 3px;
-  flex-shrink: 0;
-}
-
-#hourly-cards {
+/* ── Daily forecast row ─────────────────────────────── */
+#daily-cards-main {
   flex: 1;
   display: flex;
   gap: 4px;
-  padding: 0 8px 6px;
   overflow: hidden;
+  align-self: stretch;
+  padding-top: 16px;
 }
 
-#daily-moon-section {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-#daily-section {
-  flex: 1;
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-#daily-cards {
-  flex: 1;
-  display: flex;
-  gap: 5px;
-  padding: 0 8px 8px;
-  overflow: hidden;
-}
-
-/* ── Hourly cards ───────────────────────────────────── */
-.hour-card {
+.main-day-card {
   flex: 1;
   background: var(--bg-row);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6px 2px;
-  gap: 3px;
+  justify-content: center;
+  gap: 2px;
+  padding: 3px 2px;
   min-width: 0;
   overflow: hidden;
 }
 
-.hour-card.now-card { border-color: var(--accent); background: #0f2540; }
+.main-day-card.today-card { border-color: var(--accent2); }
 
-.hc-time   { font-size: 9px;  font-weight: 700; color: var(--text-dim); }
-.now-card .hc-time { color: var(--accent); }
-.hc-icon   { font-size: 22px; line-height: 1; }
-.hc-temp   { font-size: 15px; font-weight: 200; color: var(--text); }
-.hc-bar    { width: 60%; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.hc-bar-fill { height: 100%; background: var(--rain); border-radius: 2px; }
-.hc-rain   { font-size: 9px;  color: var(--rain); }
-.hc-wind   { font-size: 9px;  color: var(--text-dim); text-align: center; }
-
-/* ── Daily cards ────────────────────────────────────── */
-.day-card {
-  flex: 1;
-  background: var(--bg-row);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 4px;
-  gap: 4px;
-  min-width: 0;
-}
-
-.day-card.today-card { border-color: var(--accent2); }
-
-.dc-day    { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
-.today-card .dc-day { color: var(--accent2); }
-.dc-icon   { font-size: 28px; line-height: 1; }
-.dc-hilo   { display: flex; gap: 8px; font-size: 13px; font-weight: 300; }
-.dc-hi     { color: var(--text); }
-.dc-lo     { color: var(--text-dim); }
-.dc-bar    { width: 55%; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.dc-bar-fill { height: 100%; background: var(--rain); border-radius: 2px; }
-.dc-rain   { font-size: 10px; color: var(--rain); }
-.dc-wind   { font-size: 9px;  color: var(--text-dim); text-align: center; }
-
-/* ── Moon panel ─────────────────────────────────────── */
-#moon-panel {
-  width: 200px;
-  flex-shrink: 0;
-  background: var(--bg-alt);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 10px 14px;
-  gap: 6px;
-}
-
-.moon-section-label {
-  font-size: 9px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.1em; color: var(--text-dim); align-self: flex-start;
-}
-
-#moon-glyph { font-size: 58px; line-height: 1; filter: drop-shadow(0 0 10px rgba(200,200,255,0.3)); }
-#moon-phase { font-size: 12px; color: var(--text); font-weight: 300; }
-#moon-illum { font-size: 10px; color: var(--text-dim); }
-
-.moon-times { width: 100%; display: flex; flex-direction: column; gap: 3px; margin-top: 2px; }
-.moon-time-row { display: flex; justify-content: space-between; font-size: 10px; }
-.moon-time-lbl { color: var(--text-dim); }
-.moon-time-val { color: var(--text); }
-
-.moon-divider { width: 100%; height: 1px; background: var(--border); }
-.moon-next { width: 100%; display: flex; flex-direction: column; gap: 3px; }
-.moon-next-row { display: flex; justify-content: space-between; font-size: 9px; }
-.moon-next-lbl { color: var(--text-dim); }
-.moon-next-val { color: var(--solar); }
+.mdc-day  { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+.today-card .mdc-day { color: var(--accent2); }
+.mdc-icon { font-size: 18px; line-height: 1; }
+.mdc-hilo { font-size: 10px; color: var(--text); white-space: nowrap; }
+.mdc-lo   { color: var(--text-dim); }
+.mdc-rain { font-size: 9px; color: var(--rain); }
 
 /* ── Status bar ─────────────────────────────────────── */
 #statusbar {
