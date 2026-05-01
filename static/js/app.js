@@ -1,29 +1,60 @@
-/**
- * app.js — boot and auto-refresh.
- *
- * Single-page dashboard: all rows are always visible.
- * Fetches current + all history + forecast in parallel on load,
- * then refreshes every 60 seconds.
- */
+import { initNow, refreshNow }       from './now.js';
+import { refreshForecast }           from './forecast.js';
 
-import { renderCurrent }  from './current.js';
-import { renderAllRows }  from './history.js';
+const LOADING   = document.getElementById('loading');
+const TAB_NOW   = document.getElementById('tab-now');
+const TAB_FC    = document.getElementById('tab-forecast');
+const PANEL_NOW = document.getElementById('panel-now');
+const PANEL_FC  = document.getElementById('panel-forecast');
+const TABBAR_T  = document.getElementById('tabbar-time');
+const STATUS_OBS = document.getElementById('status-obs');
 
-const LOADING     = document.getElementById('loading');
-const LOADING_SUB = document.getElementById('loading-sub');
+let activeTab = 'now';
+
+function showTab(name) {
+  activeTab = name;
+  TAB_NOW.classList.toggle('active', name === 'now');
+  TAB_FC.classList.toggle('active', name === 'forecast');
+  PANEL_NOW.classList.toggle('hidden', name !== 'now');
+  PANEL_FC.classList.toggle('hidden', name !== 'forecast');
+}
+
+TAB_NOW.addEventListener('click', () => showTab('now'));
+TAB_FC.addEventListener('click',  () => showTab('forecast'));
+
+function tickClock() {
+  TABBAR_T.textContent = new Date().toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
+  });
+}
+
+async function refreshStatus() {
+  try {
+    const s = await fetch('/api/status').then(r => r.json());
+    STATUS_OBS.textContent = `${s.db_row_count} obs`;
+  } catch (_) {}
+}
 
 async function refresh() {
-  await renderAllRows();
+  await Promise.allSettled([
+    refreshNow(),
+    refreshForecast(),
+    refreshStatus(),
+  ]);
 }
 
 (async () => {
-  LOADING_SUB.textContent = 'Fetching weather data…';
+  initNow();
+  tickClock();
+  setInterval(tickClock, 1000);
+
   try {
-    await renderAllRows();
+    await refresh();
   } catch (err) {
-    console.error('Initial load failed:', err);
+    console.error('Initial load error:', err);
   } finally {
     LOADING.classList.add('hidden');
   }
+
   setInterval(refresh, 60_000);
 })();
