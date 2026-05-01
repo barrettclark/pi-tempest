@@ -1,29 +1,30 @@
 /* ============================================================
-   Tempest Dashboard — 1024×600, single-page, no tabs
-   Six metric rows, each with a stat block + blended chart.
+   Tempest Dashboard — 1024×600, two-tab layout
+   Tab bar 30px + content 548px + status bar 22px = 600px
+   Left panel 260px | Right panel 764px
    ============================================================ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:         #0a1628;
-  --bg-row:     #0d1e35;
-  --bg-alt:     #0b1a2e;
-  --accent:     #00c8ff;
-  --accent2:    #00e5b0;
-  --warn:       #ffb347;
-  --solar:      #ffd166;
-  --rain:       #74b0ff;
-  --lightning:  #ffb347;
-  --danger:     #ff4e4e;
-  --forecast:   rgba(255,255,255,0.55);
-  --text:       #e8f0fe;
-  --text-dim:   #5a7fa8;
-  --border:     #162d4a;
-  --now-line:   rgba(255,255,255,0.6);
-  --status-h:   22px;
-
-  --stat-w:     190px;
+  --bg:        #0a1628;
+  --bg-row:    #0d1e35;
+  --bg-alt:    #0b1a2e;
+  --bg-dark:   #060f1c;
+  --accent:    #00c8ff;
+  --accent2:   #00e5b0;
+  --warn:      #ffb347;
+  --solar:     #ffd166;
+  --rain:      #74b0ff;
+  --pink:      #ff6b9d;
+  --danger:    #ff4e4e;
+  --text:      #e8f0fe;
+  --text-dim:  #5a7fa8;
+  --border:    #162d4a;
+  --status-h:  22px;
+  --tab-h:     30px;
+  --content-h: calc(600px - var(--tab-h) - var(--status-h)); /* 548px */
+  --left-w:    260px;
 }
 
 html, body {
@@ -38,119 +39,440 @@ html, body {
   -webkit-user-select: none;
 }
 
-/* ── Main layout ──────────────────────────────────────────── */
-#dashboard {
+/* ── Tab bar ────────────────────────────────────────── */
+#tabbar {
+  height: var(--tab-h);
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
   display: flex;
-  flex-direction: column;
-  width: 1024px;
-  height: calc(600px - var(--status-h));
+  align-items: stretch;
+  flex-shrink: 0;
 }
 
-/* ── Metric rows ──────────────────────────────────────────── */
+.tab {
+  padding: 0 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.tab.active {
+  background: var(--bg);
+  color: var(--accent);
+  border-top: 2px solid var(--accent);
+  margin-top: -1px;
+}
+
+.tab-spacer { flex: 1; }
+
+#tabbar-time {
+  padding: 0 16px;
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+}
+
+/* ── Panels ─────────────────────────────────────────── */
+.panel {
+  display: flex;
+  width: 1024px;
+  height: var(--content-h);
+  overflow: hidden;
+}
+
+.panel.hidden { display: none; }
+
+/* ── LEFT PANEL ─────────────────────────────────────── */
+#left-panel {
+  width: var(--left-w);
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--bg-row);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 8px 10px;
+}
+
+#cond-icon { font-size: 48px; line-height: 1; }
+
+#cond-desc {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+#now-temp {
+  font-size: 58px;
+  font-weight: 200;
+  line-height: 1;
+  color: var(--text);
+}
+
+#now-sublabel {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+#rain-intensity {
+  font-size: 12px;
+  color: var(--rain);
+  text-align: center;
+}
+
+#rain-intensity.hidden { display: none; }
+
+#wind-gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+#wind-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 14px;
+}
+
+/* ── RIGHT PANEL ────────────────────────────────────── */
+#right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .row {
   display: flex;
-  flex-direction: row;
+  align-items: center;
   border-bottom: 1px solid var(--border);
+  padding: 0 12px;
+  gap: 10px;
+  flex-shrink: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .row:last-child { border-bottom: none; }
 .row:nth-child(even) { background: var(--bg-alt); }
 
-/* Row heights — total must equal 600 - 22 = 578px */
-.row-temperature { flex: 0 0 148px; }
-.row-wind        { flex: 0 0 108px; }
-.row-rain        { flex: 0 0 106px; }
-.row-pressure    { flex: 0 0 90px;  }
-.row-solar       { flex: 0 0 86px;  }
-.row-lightning   { flex: 0 0 40px;  }
+/* Row heights — total = 548px */
+.row-temp     { height: 110px; }
+.row-upcoming { height: 130px; padding: 0; }
+.row-rain     { height: 83px; }
+.row-pressure { height: 72px; }
+.row-uvaqi    { height: 78px; }
+.row-lightning{ height: 75px; }
 
-/* ── Stat block ───────────────────────────────────────────── */
-.stat {
-  flex: 0 0 var(--stat-w);
-  padding: 8px 10px 6px;
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.stat-title {
+.row-label {
+  position: absolute;
+  top: 5px;
+  left: 12px;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.12em;
   text-transform: uppercase;
+  letter-spacing: 0.1em;
   color: var(--text-dim);
-  margin-bottom: 2px;
+  z-index: 1;
 }
 
-.stat-primary {
-  font-size: 42px;
-  font-weight: 200;
-  line-height: 1;
-  color: var(--text);
-  white-space: nowrap;
+.row-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
-/* Smaller primary for less-important rows */
-.stat-primary-md {
-  font-size: 30px;
-  font-weight: 200;
-  line-height: 1.1;
-  color: var(--text);
-}
-
-.stat-primary-sm {
-  font-size: 22px;
-  font-weight: 300;
-  line-height: 1.2;
-  color: var(--text);
-}
-
-.stat-secondary {
-  font-size: 12px;
-  color: var(--text-dim);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.stat-secondary b { color: var(--text); font-weight: 600; }
-
-.trend-rising  { color: var(--warn); }
-.trend-falling { color: var(--rain); }
-.trend-steady  { color: var(--text-dim); }
-
-/* ── Chart area ───────────────────────────────────────────── */
-.chart-area {
+/* ── Sparklines ─────────────────────────────────────── */
+.spark-wrap {
   flex: 1;
+  height: 42px;
   position: relative;
   overflow: hidden;
-  padding: 6px 8px 4px 2px;
+  min-width: 60px;
 }
 
-.chart-area canvas {
+.spark-wrap canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
 }
 
-/* ── Status bar ───────────────────────────────────────────── */
+.spark-rain   { height: 36px; }
+.spark-solar  { height: 36px; max-width: 160px; flex: none; }
+
+/* ── Temperature row specifics ──────────────────────── */
+#temp-val {
+  font-size: 34px;
+  font-weight: 200;
+  color: var(--text);
+  white-space: nowrap;
+  margin-top: 14px;
+  align-self: flex-start;
+}
+
+#temp-meta {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  align-self: flex-end;
+  padding-bottom: 8px;
+}
+
+/* ── Upcoming row ───────────────────────────────────── */
+#upcoming-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Rain row ───────────────────────────────────────── */
+#rain-totals {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.rain-total { text-align: center; }
+.rain-total .rain-val {
+  font-size: 18px;
+  font-weight: 200;
+  color: var(--rain);
+  line-height: 1;
+}
+.rain-total .rain-lbl {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Pressure row ───────────────────────────────────── */
+#pressure-val {
+  font-size: 20px;
+  font-weight: 200;
+  color: var(--text);
+  white-space: nowrap;
+  margin-top: 14px;
+  align-self: flex-start;
+}
+
+#pressure-trend {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.trend-rising  { color: var(--warn); }
+.trend-falling { color: var(--rain); }
+.trend-steady  { color: var(--text-dim); }
+
+/* ── UV+AQI row ─────────────────────────────────────── */
+#uv-val, #aqi-val {
+  flex-shrink: 0;
+}
+#uv-val .uv-num    { font-size: 14px; font-weight: 200; color: var(--text); line-height: 1; }
+#uv-val .uv-cat    { font-size: 9px;  color: var(--text-dim); }
+#solar-val .sol-num { font-size: 14px; font-weight: 200; color: var(--solar); line-height: 1; }
+#solar-val .sol-lbl { font-size: 9px;  color: var(--text-dim); }
+#aqi-val .aqi-num   { font-size: 14px; font-weight: 200; line-height: 1; }
+#aqi-val .aqi-cat   { font-size: 9px;  }
+#aqi-pollutants    { font-size: 9px;  color: var(--text-dim); line-height: 1.8; }
+
+/* ── Lightning row ──────────────────────────────────── */
+#lightning-rate {
+  font-size: 22px;
+  font-weight: 200;
+  color: var(--warn);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#lightning-last {
+  font-size: 10px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+#lightning-totals {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── FORECAST PANEL ─────────────────────────────────── */
+#panel-forecast {
+  flex-direction: column;
+}
+
+#hourly-section {
+  flex: 0 0 230px;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.section-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  padding: 5px 14px 3px;
+  flex-shrink: 0;
+}
+
+#hourly-cards {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  padding: 0 8px 6px;
+  overflow: hidden;
+}
+
+#daily-moon-section {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+#daily-section {
+  flex: 1;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#daily-cards {
+  flex: 1;
+  display: flex;
+  gap: 5px;
+  padding: 0 8px 8px;
+  overflow: hidden;
+}
+
+/* ── Hourly cards ───────────────────────────────────── */
+.hour-card {
+  flex: 1;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 2px;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hour-card.now-card { border-color: var(--accent); background: #0f2540; }
+
+.hc-time   { font-size: 9px;  font-weight: 700; color: var(--text-dim); }
+.now-card .hc-time { color: var(--accent); }
+.hc-icon   { font-size: 22px; line-height: 1; }
+.hc-temp   { font-size: 15px; font-weight: 200; color: var(--text); }
+.hc-bar    { width: 60%; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.hc-bar-fill { height: 100%; background: var(--rain); border-radius: 2px; }
+.hc-rain   { font-size: 9px;  color: var(--rain); }
+.hc-wind   { font-size: 9px;  color: var(--text-dim); text-align: center; }
+
+/* ── Daily cards ────────────────────────────────────── */
+.day-card {
+  flex: 1;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.day-card.today-card { border-color: var(--accent2); }
+
+.dc-day    { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+.today-card .dc-day { color: var(--accent2); }
+.dc-icon   { font-size: 28px; line-height: 1; }
+.dc-hilo   { display: flex; gap: 8px; font-size: 13px; font-weight: 300; }
+.dc-hi     { color: var(--text); }
+.dc-lo     { color: var(--text-dim); }
+.dc-bar    { width: 55%; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.dc-bar-fill { height: 100%; background: var(--rain); border-radius: 2px; }
+.dc-rain   { font-size: 10px; color: var(--rain); }
+.dc-wind   { font-size: 9px;  color: var(--text-dim); text-align: center; }
+
+/* ── Moon panel ─────────────────────────────────────── */
+#moon-panel {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--bg-alt);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 14px;
+  gap: 6px;
+}
+
+.moon-section-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--text-dim); align-self: flex-start;
+}
+
+#moon-glyph { font-size: 58px; line-height: 1; filter: drop-shadow(0 0 10px rgba(200,200,255,0.3)); }
+#moon-phase { font-size: 12px; color: var(--text); font-weight: 300; }
+#moon-illum { font-size: 10px; color: var(--text-dim); }
+
+.moon-times { width: 100%; display: flex; flex-direction: column; gap: 3px; margin-top: 2px; }
+.moon-time-row { display: flex; justify-content: space-between; font-size: 10px; }
+.moon-time-lbl { color: var(--text-dim); }
+.moon-time-val { color: var(--text); }
+
+.moon-divider { width: 100%; height: 1px; background: var(--border); }
+.moon-next { width: 100%; display: flex; flex-direction: column; gap: 3px; }
+.moon-next-row { display: flex; justify-content: space-between; font-size: 9px; }
+.moon-next-lbl { color: var(--text-dim); }
+.moon-next-val { color: var(--solar); }
+
+/* ── Status bar ─────────────────────────────────────── */
 #statusbar {
   height: var(--status-h);
+  background: var(--bg-dark);
+  border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
-  background: #060f1c;
-  border-top: 1px solid var(--border);
   font-size: 11px;
   color: var(--text-dim);
   flex-shrink: 0;
 }
 
-#status-dot {
+.dot {
   display: inline-block;
   width: 7px;
   height: 7px;
@@ -159,15 +481,15 @@ html, body {
   margin-right: 6px;
   animation: pulse 2s infinite;
 }
-#status-dot.stale { background: var(--warn); }
-#status-dot.error { background: var(--danger); animation: none; }
+.dot.stale   { background: var(--warn); }
+.dot.offline { background: var(--danger); animation: none; }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.25; }
 }
 
-/* ── Loading overlay ──────────────────────────────────────── */
+/* ── Loading overlay ─────────────────────────────────── */
 #loading {
   position: fixed;
   inset: 0;
