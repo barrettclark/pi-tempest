@@ -59,3 +59,14 @@ class AqiResponse(BaseModel):
     pm25_aqi: Optional[int]
     ozone_aqi: Optional[int]
     fetched_at: int
+
+
+class MoonResponse(BaseModel):
+    phase_name: str
+    emoji: str
+    illumination_pct: float
+    moonrise: Optional[str]
+    moonset: Optional[str]
+    next_full_moon: str
+    next_new_moon: str
+    computed_at: int
