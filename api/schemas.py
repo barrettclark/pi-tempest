@@ -51,3 +51,11 @@ class StatusResponse(BaseModel):
     last_obs_epoch: Optional[int]
     last_obs_age_seconds: Optional[int]
     backfill_complete: bool
+
+
+class AqiResponse(BaseModel):
+    aqi: Optional[int]
+    category: Optional[str]
+    pm25_aqi: Optional[int]
+    ozone_aqi: Optional[int]
+    fetched_at: int
