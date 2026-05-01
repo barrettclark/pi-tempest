@@ -1,9 +1,11 @@
 """
 GET /api/forecast — proxies WeatherFlow better_forecast endpoint.
 
-Returns the next 12 hours of hourly forecast data, converted to
-imperial units. Cached in memory for 10 minutes to avoid hammering
-the WeatherFlow API on every dashboard refresh.
+Returns:
+  hourly: next 24h of hourly forecast data, converted to imperial units
+  daily:  next 7 days of daily forecast data, converted to imperial units
+
+Cached in memory for 10 minutes.
 """
 
 import time
@@ -28,39 +30,55 @@ def _convert_hourly(h: dict) -> dict:
     wind_ms = h.get("wind_avg")
     gust_ms = h.get("wind_gust")
     return {
-        "time":              h.get("time"),
-        "conditions":        h.get("conditions"),
-        "icon":              h.get("icon"),
-        "temperature_f":     units.c_to_f(temp_c),
-        "feels_like_f":      units.c_to_f(feels_c),
-        "humidity_pct":      h.get("relative_humidity"),
-        "precip_in":         units.mm_to_in(h.get("precip") or 0),
-        "precip_prob_pct":   h.get("precip_probability"),
-        "wind_avg_mph":      units.ms_to_mph(wind_ms),
-        "wind_gust_mph":     units.ms_to_mph(gust_ms),
+        "time":                     h.get("time"),
+        "conditions":               h.get("conditions"),
+        "icon":                     h.get("icon"),
+        "temperature_f":            units.c_to_f(temp_c),
+        "feels_like_f":             units.c_to_f(feels_c),
+        "humidity_pct":             h.get("relative_humidity"),
+        "precip_in":                units.mm_to_in(h.get("precip") or 0),
+        "precip_prob_pct":          h.get("precip_probability"),
+        "wind_avg_mph":             units.ms_to_mph(wind_ms),
+        "wind_gust_mph":            units.ms_to_mph(gust_ms),
         "wind_direction_deg":       h.get("wind_direction"),
         "wind_direction_cardinal":  h.get("wind_direction_cardinal"),
-        "uv_index":          h.get("uv"),
-        "pressure_inhg":     units.mb_to_inhg(h.get("sea_level_pressure")),
+        "uv_index":                 h.get("uv"),
+        "pressure_inhg":            units.mb_to_inhg(h.get("sea_level_pressure")),
     }
 
 
-async def _fetch_forecast() -> list[dict]:
+def _convert_daily(d: dict) -> dict:
+    return {
+        "date_epoch":               d.get("day_start_local"),
+        "conditions":               d.get("conditions"),
+        "icon":                     d.get("icon"),
+        "high_f":                   units.c_to_f(d.get("air_temp_high")),
+        "low_f":                    units.c_to_f(d.get("air_temp_low")),
+        "precip_prob_pct":          d.get("precip_probability"),
+        "precip_in":                units.mm_to_in(d.get("precip") or 0),
+        "wind_avg_mph":             units.ms_to_mph(d.get("wind_avg")),
+        "wind_direction_deg":       d.get("wind_direction"),
+        "wind_direction_cardinal":  d.get("wind_direction_cardinal"),
+    }
+
+
+async def _fetch_forecast() -> dict:
     url = f"{config.WEATHERFLOW_API_BASE}/better_forecast"
-    params = {
-        "station_id": config.STATION_ID,
-        "token": config.TOKEN,
-    }
+    params = {"station_id": config.STATION_ID, "token": config.TOKEN}
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.get(url, params=params)
         resp.raise_for_status()
         data = resp.json()
         hourly = data.get("forecast", {}).get("hourly", [])
-        return [_convert_hourly(h) for h in hourly]
+        daily = data.get("forecast", {}).get("daily", [])
+        return {
+            "hourly": [_convert_hourly(h) for h in hourly],
+            "daily":  [_convert_daily(d) for d in daily[:7]],
+        }
     except Exception as exc:
         log.error("Failed to fetch forecast: %s", exc)
-        return []
+        return {"hourly": [], "daily": []}
 
 
 @router.get("/forecast")
@@ -71,13 +89,17 @@ async def get_forecast():
         _cache["data"] = await _fetch_forecast()
         _cache["fetched_at"] = now
 
-    hourly = _cache["data"] or []
+    forecast_data = _cache["data"] or {"hourly": [], "daily": []}
 
-    # Return the next 12 hours only
-    cutoff = int(now) + 12 * 3600
-    upcoming = [h for h in hourly if h.get("time") and now <= h["time"] <= cutoff]
+    # Return hourly for next 24h
+    cutoff = int(now) + 24 * 3600
+    upcoming = [
+        h for h in forecast_data["hourly"]
+        if h.get("time") and now <= h["time"] <= cutoff
+    ]
 
     return {
         "fetched_at": int(_cache["fetched_at"]),
         "hourly":     upcoming,
+        "daily":      forecast_data["daily"],
     }
