@@ -9,12 +9,31 @@ import time
 from typing import Optional
 
 import aiosqlite
+import httpx
 from fastapi import APIRouter, Depends, Query
 
 from api.deps import get_db
 from api import units
 
 router = APIRouter()
+
+_stats_cache: dict = {"data": None, "fetched_at": 0.0}
+_STATS_TTL = 1800  # 30 minutes
+
+
+async def _fetch_wf_stats() -> dict:
+    import config as _config
+    now = time.time()
+    if _stats_cache["data"] and now - _stats_cache["fetched_at"] < _STATS_TTL:
+        return _stats_cache["data"]
+    url = f"{_config.WEATHERFLOW_API_BASE}/stats/station/{_config.STATION_ID}"
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get(url, params={"token": _config.TOKEN})
+        resp.raise_for_status()
+        data = resp.json()
+    _stats_cache["data"] = data
+    _stats_cache["fetched_at"] = now
+    return data
 
 
 def _round_none(v, digits=1) -> Optional[float]:
@@ -101,21 +120,34 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
     )
     daily_rows = await cursor.fetchall()
 
-    # Monthly total
-    cursor = await db.execute(
-        "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :since AND rain_accumulated IS NOT NULL",
-        {"since": month_start},
-    )
-    row = await cursor.fetchone()
-    rain_month_in = round(units.mm_to_in(row[0] or 0), 2)
+    # Month/year totals from WeatherFlow stats API (full history, not limited to local DB)
+    try:
+        stats = await _fetch_wf_stats()
+        ym = now_local.strftime("%Y-%m")
+        y  = now_local.strftime("%Y")
+        rain_month_in = round(sum(
+            r[28] for r in stats["stats_day"]
+            if r[0].startswith(ym) and r[28] is not None
+        ) / 25.4, 2)
+        rain_year_in = round(sum(
+            r[28] for r in stats["stats_day"]
+            if r[0].startswith(y) and r[28] is not None
+        ) / 25.4, 2)
+    except Exception:
+        # Fall back to SQLite on API failure
+        cursor = await db.execute(
+            "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :since AND rain_accumulated IS NOT NULL",
+            {"since": month_start},
+        )
+        row = await cursor.fetchone()
+        rain_month_in = round(units.mm_to_in(row[0] or 0), 2)
 
-    # Yearly total
-    cursor = await db.execute(
-        "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :since AND rain_accumulated IS NOT NULL",
-        {"since": year_start},
-    )
-    row = await cursor.fetchone()
-    rain_year_in = round(units.mm_to_in(row[0] or 0), 2)
+        cursor = await db.execute(
+            "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :since AND rain_accumulated IS NOT NULL",
+            {"since": year_start},
+        )
+        row = await cursor.fetchone()
+        rain_year_in = round(units.mm_to_in(row[0] or 0), 2)
 
     return {
         "hourly_labels":  [r[0] for r in hourly_rows],

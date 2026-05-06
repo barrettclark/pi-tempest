@@ -39,10 +39,10 @@ export function initNow() {
   uvGauge   = new MiniArcGauge(document.getElementById('uv-gauge'),  { max: 11,  color: '#ff6b9d' });
   aqiGauge  = new MiniArcGauge(document.getElementById('aqi-gauge'), { max: 300, color: '#00e5b0' });
 
-  sp.temp     = createBlendedSparkline(document.getElementById('sp-temp'));
-  sp.rain     = createBarSparkline(document.getElementById('sp-rain'),     '#74b0ff');
-  sp.pressure = createLineSparkline(document.getElementById('sp-pressure'),'#00e5b0', false);
-  sp.solar    = createLineSparkline(document.getElementById('sp-solar'),   '#ffd166', true);
+  try { sp.temp     = createBlendedSparkline(document.getElementById('sp-temp'),      v => `${Number(v).toFixed(1)}°`, true); } catch(_) {}
+  try { sp.rain     = createBarSparkline(document.getElementById('sp-rain'),          '#74b0ff'); } catch(_) {}
+  try { sp.pressure = createLineSparkline(document.getElementById('sp-pressure'), '#00e5b0', false, v => `${Number(v).toFixed(2)}`); } catch(_) {}
+  try { sp.solar    = createLineSparkline(document.getElementById('sp-solar'),    '#ffd166', true,  v => `${Math.round(Number(v))}`); } catch(_) {}
 }
 
 export async function refreshNow() {
@@ -60,24 +60,22 @@ export async function refreshNow() {
   const c = cur.status === 'fulfilled' ? cur.value : null;
   const fc = forecast.status === 'fulfilled' ? forecast.value : { hourly: [], daily: [] };
 
+  const _try = (fn) => { try { fn(); } catch(e) { console.error(e); } };
+
   if (c) {
-    _updateLeft(c, fc.hourly);
-    _updateStatusBar(c);
+    _try(() => _updateLeft(c, fc.hourly));
+    _try(() => _updateStatusBar(c));
   }
 
-  if (c && tempH.status === 'fulfilled') {
-    _updateTempRow(c, tempH.value, fc.hourly);
-  }
-
-  _updateUpcoming(fc.hourly);
-
-  if (rainH.status === 'fulfilled') _updateRainRow(rainH.value, c);
-  if (c && pressH.status === 'fulfilled') _updatePressureRow(c, pressH.value);
-  if (c && solarH.status === 'fulfilled') _updateSolarRow(c, solarH.value);
-  if (aqi.status === 'fulfilled') _updateAqiRow(aqi.value, c);
-  if (c) _updateLightningCompact(c);
-  _updateDailyRow(fc.daily ?? []);
-  if (moonR.status === 'fulfilled') _updateMoonMini(moonR.value);
+  if (tempH.status === 'fulfilled')        _try(() => _updateTempRow(tempH.value, fc.hourly));
+  _try(() => _updateUpcoming(fc.hourly));
+  if (rainH.status === 'fulfilled')       _try(() => _updateRainRow(rainH.value, c));
+  if (c && pressH.status === 'fulfilled') _try(() => _updatePressureRow(c, pressH.value));
+  if (c && solarH.status === 'fulfilled') _try(() => _updateSolarRow(c, solarH.value));
+  if (aqi.status === 'fulfilled')         _try(() => _updateAqiRow(aqi.value, c));
+  if (c)                                  _try(() => _updateLightningCompact(c));
+  _try(() => _updateDailyRow(fc.daily ?? []));
+  if (moonR.status === 'fulfilled')       _try(() => _updateMoonMini(moonR.value));
 }
 
 function _updateLeft(c, hourly = []) {
@@ -86,8 +84,10 @@ function _updateLeft(c, hourly = []) {
   document.getElementById('cond-desc').textContent = h0?.conditions ?? '';
   document.getElementById('now-temp').textContent =
     c.temperature_f != null ? `${c.temperature_f.toFixed(1)}°` : '—';
-  document.getElementById('now-sublabel').textContent =
-    `Feels ${c.feels_like_f?.toFixed(0) ?? '—'}°  ·  Dew ${c.dew_point_f?.toFixed(0) ?? '—'}°  ·  ${c.humidity_pct?.toFixed(0) ?? '—'}%`;
+  document.getElementById('now-feels').textContent =
+    `Feels ${c.feels_like_f?.toFixed(0) ?? '—'}°`;
+  document.getElementById('now-humidity').textContent =
+    `${c.humidity_pct?.toFixed(0) ?? '—'}%`;
 
   const ri = document.getElementById('rain-intensity');
   if (c.rain_rate_in_hr != null && c.rain_rate_in_hr > 0) {
@@ -108,16 +108,10 @@ function _updateLeft(c, hourly = []) {
     `<span><b style="color:#e8f0fe;font-size:12px">${c.wind_gust_mph ?? '—'}</b> gust</span>`;
 }
 
-function _updateTempRow(c, histData, hourly) {
-  document.getElementById('temp-val').textContent =
-    c.temperature_f != null ? `${c.temperature_f.toFixed(1)}°F` : '—';
-
+function _updateTempRow(histData, hourly) {
   const temps = histData.temperature_f?.filter(t => t != null) ?? [];
-  const hi = temps.length ? Math.max(...temps).toFixed(1) : '—';
-  const lo = temps.length ? Math.min(...temps).toFixed(1) : '—';
-  document.getElementById('temp-meta').textContent =
-    `Hi ${hi}°  ·  Lo ${lo}°`;
-
+  document.querySelector('.th-hi').textContent = temps.length ? `Hi ${Math.max(...temps).toFixed(1)}°` : 'Hi —';
+  document.querySelector('.th-lo').textContent = temps.length ? `Lo ${Math.min(...temps).toFixed(1)}°` : 'Lo —';
   updateBlendedSparkline(sp.temp, histData.labels, histData.temperature_f, hourly, 'temperature_f');
 }
 
@@ -149,9 +143,27 @@ function _updatePressureRow(c, histData) {
     steady:  { sym: '►', label: 'Steady',  desc: 'No change',   cls: 'trend-steady'  },
   };
   const t = trendMap[trend] ?? trendMap.steady;
-  trendEl.innerHTML = `${t.sym} ${t.label} <span style="color:#5a7fa8">· ${t.desc}</span>`;
+
+  const vals = (histData.pressure_inhg ?? []).filter(v => v != null);
+  let lineColor = '#00e5b0';
+  let deltaStr = '';
+  if (vals.length >= 2) {
+    const delta = vals[vals.length - 1] - vals[0];
+    const abs = Math.abs(delta);
+    if (abs > 0.30) {
+      lineColor = '#ff4e4e';
+    } else if (abs > 0.12) {
+      lineColor = '#ffb347';
+    }
+    const sign = delta >= 0 ? '+' : '';
+    deltaStr = ` <span style="color:${lineColor};font-size:9px">${sign}${delta.toFixed(2)}" / 6h</span>`;
+  }
+
+  trendEl.innerHTML = `${t.sym} ${t.label} <span style="color:#5a7fa8">· ${t.desc}</span>${deltaStr}`;
   trendEl.className = t.cls;
 
+  sp.pressure.data.datasets[0].borderColor = lineColor;
+  sp.pressure.data.datasets[0].backgroundColor = lineColor + '18';
   updateLineSparkline(sp.pressure, histData.labels, histData.pressure_inhg);
 }
 

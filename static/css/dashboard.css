@@ -1,6 +1,6 @@
 /* ============================================================
-   Tempest Dashboard — 1024×600, two-tab layout
-   Tab bar 30px + content 548px + status bar 22px = 600px
+   Tempest Dashboard — 1024×600
+   Content 578px + status bar 22px = 600px
    Left panel 260px | Right panel 764px
    ============================================================ */
 
@@ -22,8 +22,7 @@
   --text-dim:  #5a7fa8;
   --border:    #162d4a;
   --status-h:  22px;
-  --tab-h:     30px;
-  --content-h: calc(600px - var(--tab-h) - var(--status-h)); /* 548px */
+  --content-h: calc(600px - var(--status-h)); /* 578px */
   --left-w:    260px;
 }
 
@@ -37,48 +36,6 @@ html, body {
   font-size: 14px;
   user-select: none;
   -webkit-user-select: none;
-}
-
-/* ── Tab bar ────────────────────────────────────────── */
-#tabbar {
-  height: var(--tab-h);
-  background: var(--bg-dark);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: stretch;
-  flex-shrink: 0;
-}
-
-.tab {
-  padding: 0 20px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--border);
-  color: var(--text-dim);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-}
-
-.tab.active {
-  background: var(--bg);
-  color: var(--accent);
-  border-top: 2px solid var(--accent);
-  margin-top: -1px;
-}
-
-.tab-spacer { flex: 1; }
-
-#tabbar-time {
-  padding: 0 16px;
-  font-size: 11px;
-  color: var(--text-dim);
-  display: flex;
-  align-items: center;
 }
 
 /* ── Panels ─────────────────────────────────────────── */
@@ -121,10 +78,21 @@ html, body {
   color: var(--text);
 }
 
-#now-sublabel {
-  font-size: 10px;
-  color: var(--text-dim);
-  text-align: center;
+#now-feelhum {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+
+#now-feels {
+  font-size: 13px;
+  color: var(--text);
+}
+
+#now-humidity {
+  font-size: 16px;
+  font-weight: 200;
+  color: var(--accent);
 }
 
 #rain-intensity {
@@ -181,13 +149,13 @@ html, body {
 .row:last-child { border-bottom: none; }
 .row:nth-child(even) { background: var(--bg-alt); }
 
-/* Row heights — total = 548px */
-.row-temp         { height: 110px; }
-.row-upcoming     { height: 130px; padding: 0; }
+/* Row heights — total = 578px */
+.row-temp         { height: 140px; }
+.row-upcoming     { height: 125px; padding: 0; }
 .row-rainlightning{ height: 75px; }
 .row-pressure     { height: 72px; }
 .row-uvaqi        { height: 78px; }
-.row-daily        { height: 83px; padding: 0 8px; }
+.row-daily        { height: 88px; padding: 0 8px; }
 
 .row-label {
   position: absolute;
@@ -225,6 +193,7 @@ html, body {
 
 .spark-rain   { height: 36px; }
 .spark-solar  { height: 36px; }
+.spark-temp   { height: 112px; }
 
 /* ── UV·Solar·AQI sections ──────────────────────────── */
 .uvaqi-sec {
@@ -237,22 +206,24 @@ html, body {
 }
 
 /* ── Temperature row specifics ──────────────────────── */
-#temp-val {
-  font-size: 34px;
-  font-weight: 200;
-  color: var(--text);
-  white-space: nowrap;
-  margin-top: 14px;
-  align-self: flex-start;
+#temp-hilo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  align-self: center;
+  padding-top: 10px;
 }
 
-#temp-meta {
-  font-size: 10px;
-  color: var(--text-dim);
+.th-val {
+  font-size: 16px;
+  font-weight: 200;
   white-space: nowrap;
-  align-self: flex-end;
-  padding-bottom: 8px;
+  line-height: 1;
 }
+
+.th-hi { color: var(--pink); }
+.th-lo { color: var(--accent); }
 
 /* ── Upcoming row ───────────────────────────────────── */
 #upcoming-inner {
@@ -372,12 +343,31 @@ html, body {
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
+  gap: 16px;
+  padding: 0 0 0 12px;
   font-size: 11px;
   color: var(--text-dim);
   flex-shrink: 0;
 }
+
+#statusbar-time {
+  margin-left: auto;
+}
+
+#exit-btn {
+  padding: 0 14px;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
+}
+#exit-btn:hover { color: var(--danger); }
 
 .dot {
   display: inline-block;

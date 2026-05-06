@@ -162,7 +162,7 @@ async def get_current(db: aiosqlite.Connection = Depends(get_db)):
         rain_today_in=rain_today,
         rain_rate_in_hr=_compute_rain_rate_in_hr(
             row["rain_accumulated"], row["report_interval"]
-        ) if row["precipitation_type"] else None,
+        ),
         uv_index=row["uv"],
         solar_radiation_wm2=row["solar_radiation"],
         lightning_count_1h=lightning_count,

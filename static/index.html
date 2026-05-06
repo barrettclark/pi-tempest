@@ -5,16 +5,9 @@
   <meta name="viewport" content="width=1024, initial-scale=1.0">
   <title>Tempest</title>
   <link rel="stylesheet" href="/css/dashboard.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <script src="/js/vendor/chart.umd.min.js"></script>
 </head>
 <body>
-
-<!-- ── Tab bar (header + clock) ───────────────────────── -->
-<div id="tabbar">
-  <button class="tab active" id="tab-now">Now</button>
-  <div class="tab-spacer"></div>
-  <div id="tabbar-time">—</div>
-</div>
 
 <!-- ── NOW panel ──────────────────────────────────────── -->
 <div id="panel-now" class="panel">
@@ -23,7 +16,10 @@
     <div id="cond-icon">—</div>
     <div id="cond-desc">—</div>
     <div id="now-temp">—</div>
-    <div id="now-sublabel">—</div>
+    <div id="now-feelhum">
+      <span id="now-feels">—</span>
+      <span id="now-humidity">—</span>
+    </div>
     <div id="rain-intensity" class="hidden">—</div>
     <div id="wind-gauge-wrap">
       <svg id="wind-gauge" viewBox="0 0 124 124" width="124" height="124"></svg>
@@ -36,9 +32,11 @@
 
     <div class="row row-temp">
       <div class="row-label">Temperature</div>
-      <div id="temp-val">—</div>
-      <div id="temp-meta">—</div>
-      <div class="spark-wrap"><canvas id="sp-temp"></canvas></div>
+      <div id="temp-hilo">
+        <div class="th-val th-hi">—</div>
+        <div class="th-val th-lo">—</div>
+      </div>
+      <div class="spark-wrap spark-temp"><canvas id="sp-temp"></canvas></div>
     </div>
 
     <div class="row row-upcoming">
@@ -93,6 +91,8 @@
   <span><span id="status-dot" class="dot"></span><span id="status-time">—</span></span>
   <span>Coppell, TX</span>
   <span id="status-obs">—</span>
+  <span id="statusbar-time">—</span>
+  <button id="exit-btn" title="Exit kiosk">&#x2715;</button>
 </div>
 
 <div id="loading">

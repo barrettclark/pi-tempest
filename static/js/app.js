@@ -1,11 +1,11 @@
 import { initNow, refreshNow } from './now.js';
 
-const LOADING    = document.getElementById('loading');
-const TABBAR_T   = document.getElementById('tabbar-time');
-const STATUS_OBS = document.getElementById('status-obs');
+const LOADING      = document.getElementById('loading');
+const STATUSBAR_T  = document.getElementById('statusbar-time');
+const STATUS_OBS   = document.getElementById('status-obs');
 
 function tickClock() {
-  TABBAR_T.textContent = new Date().toLocaleTimeString('en-US', {
+  STATUSBAR_T.textContent = new Date().toLocaleTimeString('en-US', {
     hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
   });
 }
@@ -21,14 +21,20 @@ async function refresh() {
   await Promise.allSettled([refreshNow(), refreshStatus()]);
 }
 
+document.getElementById('exit-btn')?.addEventListener('click', () => {
+  fetch('/api/exit', { method: 'POST' }).catch(() => {});
+});
+
 (async () => {
-  initNow();
   tickClock();
   setInterval(tickClock, 1000);
   try {
+    initNow();
     await refresh();
   } catch (err) {
-    console.error('Initial load error:', err);
+    console.error('Load error:', err);
+    document.getElementById('loading-sub').textContent = String(err);
+    await new Promise(r => setTimeout(r, 8000));
   } finally {
     LOADING.classList.add('hidden');
   }
