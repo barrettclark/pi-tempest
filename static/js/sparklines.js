@@ -89,7 +89,23 @@ export function createLineSparkline(canvasEl, color, fill = true, format = null)
   });
 }
 
-export function createBarSparkline(canvasEl, color) {
+export function createBarSparkline(canvasEl, color, showYAxis = false) {
+  const scales = showYAxis ? {
+    x: { display: false, type: 'linear' },
+    y: {
+      display: true,
+      position: 'right',
+      grid: { color: _C_GRID, drawBorder: false },
+      border: { display: false },
+      ticks: {
+        color: _C_TICK,
+        font: { size: 8 },
+        maxTicksLimit: 3,
+        callback: v => v > 0 ? `${v}"` : '',
+      },
+    },
+  } : BASE_OPTS.scales;
+
   return new Chart(canvasEl, {
     type: 'bar',
     data: {
@@ -101,7 +117,7 @@ export function createBarSparkline(canvasEl, color) {
         maxBarThickness: 10,
       }],
     },
-    options: BASE_OPTS,
+    options: { ...BASE_OPTS, scales },
   });
 }
 
@@ -174,8 +190,10 @@ export function updateLineSparkline(chart, labels, values) {
   chart.update('none');
 }
 
-export function updateBarSparkline(chart, labels, values) {
-  chart.data.datasets[0].data = labels.map((x, i) => ({ x, y: values[i] }));
+export function updateBarSparkline(chart, labels, values, colorFn = null) {
+  const pts = labels.map((x, i) => ({ x, y: values[i] }));
+  chart.data.datasets[0].data = pts;
+  if (colorFn) chart.data.datasets[0].backgroundColor = pts.map(p => colorFn(p.y));
   chart.update('none');
 }
 

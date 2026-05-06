@@ -40,7 +40,7 @@ export function initNow() {
   aqiGauge  = new MiniArcGauge(document.getElementById('aqi-gauge'), { max: 300, color: '#00e5b0' });
 
   try { sp.temp     = createBlendedSparkline(document.getElementById('sp-temp'),      v => `${Number(v).toFixed(1)}°`, true); } catch(_) {}
-  try { sp.rain     = createBarSparkline(document.getElementById('sp-rain'),          '#74b0ff'); } catch(_) {}
+  try { sp.rain     = createBarSparkline(document.getElementById('sp-rain'),          '#74b0ff', true); } catch(_) {}
   try { sp.pressure = createLineSparkline(document.getElementById('sp-pressure'), '#00e5b0', false, v => `${Number(v).toFixed(2)}`); } catch(_) {}
   try { sp.solar    = createLineSparkline(document.getElementById('sp-solar'),    '#ffd166', true,  v => `${Math.round(Number(v))}`); } catch(_) {}
 }
@@ -91,7 +91,12 @@ function _updateLeft(c, hourly = []) {
 
   const ri = document.getElementById('rain-intensity');
   if (c.rain_rate_in_hr != null && c.rain_rate_in_hr > 0) {
-    ri.textContent = `☔ ${c.rain_rate_in_hr.toFixed(2)} in/hr`;
+    const { cat, color, pct } = _rainCategory(c.rain_rate_in_hr);
+    document.getElementById('rain-cat').textContent = cat;
+    document.getElementById('rain-cat').style.color = color;
+    document.getElementById('rain-meter-fill').style.width = `${pct}%`;
+    document.getElementById('rain-meter-fill').style.background = color;
+    document.getElementById('rain-rate-val').textContent = `${c.rain_rate_in_hr.toFixed(2)} in/hr`;
     ri.classList.remove('hidden');
   } else {
     ri.classList.add('hidden');
@@ -127,7 +132,7 @@ function _updateRainRow(rainData, c) {
     `<div class="rain-total"><div class="rain-val">${today.toFixed(2)}"</div><div class="rain-lbl">Today</div></div>` +
     `<div class="rain-total"><div class="rain-val">${month.toFixed(2)}"</div><div class="rain-lbl">Month</div></div>` +
     `<div class="rain-total"><div class="rain-val">${year.toFixed(2)}"</div><div class="rain-lbl">Year</div></div>`;
-  updateBarSparkline(sp.rain, rainData.hourly_labels, rainData.hourly_rain_in);
+  updateBarSparkline(sp.rain, rainData.hourly_labels, rainData.hourly_rain_in, _rainBarColor);
 }
 
 function _updatePressureRow(c, histData) {
@@ -248,6 +253,21 @@ function _updateStatusBar(c) {
   const age = c.epoch ? Math.floor(Date.now() / 1000) - c.epoch : null;
   dot.className = 'dot' + (age == null || age > 180 ? ' stale' : '');
   document.getElementById('status-time').textContent = fmt12(c.epoch);
+}
+
+function _rainCategory(rate) {
+  if (rate >= 0.60) return { cat: 'Violent',  color: '#ff6b9d', pct: 100 };
+  if (rate >= 0.30) return { cat: 'Heavy',    color: '#ffd166', pct: Math.round(rate / 0.6 * 100) };
+  if (rate >= 0.10) return { cat: 'Moderate', color: '#00c8ff', pct: Math.round(rate / 0.6 * 100) };
+  if (rate >= 0.01) return { cat: 'Light',    color: '#74b0ff', pct: Math.max(8, Math.round(rate / 0.6 * 100)) };
+  return                     { cat: 'Drizzle', color: '#74b0ff', pct: 4 };
+}
+
+function _rainBarColor(inHr) {
+  if (inHr >= 0.30) return '#ff6b9d';
+  if (inHr >= 0.10) return '#00c8ff';
+  if (inHr >= 0.01) return '#74b0ff';
+  return 'rgba(116,176,255,0.25)';
 }
 
 function _uvCategory(uv) {

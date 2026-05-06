@@ -85,23 +85,52 @@ html, body {
 }
 
 #now-feels {
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 200;
   color: var(--text);
 }
 
 #now-humidity {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 200;
   color: var(--accent);
 }
 
 #rain-intensity {
-  font-size: 12px;
-  color: var(--rain);
-  text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 #rain-intensity.hidden { display: none; }
+
+#rain-cat {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.rain-meter-track {
+  width: 140px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(116,176,255,0.15);
+  overflow: hidden;
+}
+
+#rain-meter-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+#rain-rate-val {
+  font-size: 10px;
+  color: var(--text-dim);
+}
 
 #wind-gauge-wrap {
   display: flex;
