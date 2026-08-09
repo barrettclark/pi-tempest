@@ -1,29 +1,27 @@
 /* ============================================================
    Tempest Dashboard — 1024×600
-   Content 578px + status bar 22px = 600px
-   Left panel 260px | Right panel 764px
+   Grid: 300/424/300 columns × 150/220/208 rows = 578px content + 22px status bar
    ============================================================ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
   --bg:        #0a1628;
-  --bg-row:    #0d1e35;
+  --bg-cell:   #0d1e35;
   --bg-alt:    #0b1a2e;
   --bg-dark:   #060f1c;
   --accent:    #00c8ff;
   --accent2:   #00e5b0;
   --warn:      #ffb347;
-  --solar:     #ffd166;
   --rain:      #74b0ff;
   --pink:      #ff6b9d;
   --danger:    #ff4e4e;
+  --solar:     #ffd166;
   --text:      #e8f0fe;
   --text-dim:  #5a7fa8;
   --border:    #162d4a;
   --status-h:  22px;
-  --content-h: calc(600px - var(--status-h)); /* 578px */
-  --left-w:    260px;
+  --content-h: calc(600px - var(--status-h));
 }
 
 html, body {
@@ -33,339 +31,169 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Segoe UI', system-ui, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* ── Panels ─────────────────────────────────────────── */
-.panel {
-  display: flex;
+/* ── Grid ─────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 300px 424px 300px;
+  grid-template-rows: 150px 220px 208px;
   width: 1024px;
   height: var(--content-h);
   overflow: hidden;
 }
 
-.panel.hidden { display: none; }
-
-/* ── LEFT PANEL ─────────────────────────────────────── */
-#left-panel {
-  width: var(--left-w);
-  flex-shrink: 0;
+.cell {
   border-right: 1px solid var(--border);
-  background: var(--bg-row);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-evenly;
-  padding: 8px 10px;
-}
-
-#cond-icon { font-size: 48px; line-height: 1; }
-
-#cond-desc {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-}
-
-#now-temp {
-  font-size: 58px;
-  font-weight: 200;
-  line-height: 1;
-  color: var(--text);
-}
-
-#now-feelhum {
-  display: flex;
-  gap: 14px;
-  align-items: baseline;
-}
-
-#now-feels {
-  font-size: 14px;
-  font-weight: 200;
-  color: var(--text);
-}
-
-#now-humidity {
-  font-size: 14px;
-  font-weight: 200;
-  color: var(--accent);
-}
-
-#rain-intensity {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-#rain-intensity.hidden { display: none; }
-
-#rain-cat {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.rain-meter-track {
-  width: 140px;
-  height: 5px;
-  border-radius: 3px;
-  background: rgba(116,176,255,0.15);
-  overflow: hidden;
-}
-
-#rain-meter-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-#rain-rate-val {
-  font-size: 10px;
-  color: var(--text-dim);
-}
-
-#wind-gauge-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-#wind-sub {
-  font-size: 11px;
-  color: var(--text-dim);
-  display: flex;
-  gap: 14px;
-}
-
-/* ── Moon mini (left panel) ─────────────────────────── */
-#moon-mini {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-#moon-mini .moon-emoji { font-size: 26px; line-height: 1; }
-#moon-mini .moon-name  { font-size: 10px; color: var(--text); font-weight: 300; }
-#moon-mini .moon-times { font-size: 9px; color: var(--text-dim); text-align: center; line-height: 1.6; }
-
-/* ── RIGHT PANEL ────────────────────────────────────── */
-#right-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.row {
-  display: flex;
-  align-items: center;
   border-bottom: 1px solid var(--border);
-  padding: 0 12px;
-  gap: 10px;
-  flex-shrink: 0;
+  background: var(--bg-cell);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   position: relative;
 }
 
-.row:last-child { border-bottom: none; }
-.row:nth-child(even) { background: var(--bg-alt); }
+.cell:nth-child(odd) { background: var(--bg-alt); }
 
-/* Row heights — total = 578px */
-.row-temp         { height: 140px; }
-.row-upcoming     { height: 125px; padding: 0; }
-.row-rainlightning{ height: 75px; }
-.row-pressure     { height: 72px; }
-.row-uvaqi        { height: 78px; }
-.row-daily        { height: 88px; padding: 0 8px; }
+.cell-uv       { grid-column: 1; grid-row: 1; }
+.cell-wind     { grid-column: 1; grid-row: 2; }
+.cell-sunrise  { grid-column: 1; grid-row: 3; border-bottom: none; justify-content: space-between; }
+.cell-hero     { grid-column: 2; grid-row: 1 / span 2; background: var(--bg-cell) !important;
+                 align-items: center; text-align: center; padding: 32px 20px 16px; }
+.cell-rain     { grid-column: 2; grid-row: 3; border-bottom: none; }
+.cell-aqi      { grid-column: 3; grid-row: 1; border-right: none; }
+.cell-pressure { grid-column: 3; grid-row: 2; border-right: none; }
+.cell-moon     { grid-column: 3; grid-row: 3; border-right: none; border-bottom: none; }
 
-.row-label {
-  position: absolute;
-  top: 5px;
-  left: 12px;
+.cell-label {
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-dim);
-  z-index: 1;
-}
-
-.row-divider {
-  width: 1px;
-  height: 36px;
-  background: var(--border);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   flex-shrink: 0;
 }
+.cell-label .lbl-icon { font-size: 12px; }
 
-/* ── Sparklines ─────────────────────────────────────── */
-.spark-wrap {
-  flex: 1;
-  height: 42px;
-  position: relative;
-  overflow: hidden;
-  min-width: 60px;
-}
-
-.spark-wrap canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.spark-rain   { height: 36px; }
-.spark-solar  { height: 36px; }
-.spark-temp   { height: 112px; }
-
-/* ── UV·Solar·AQI sections ──────────────────────────── */
-.uvaqi-sec {
+/* ── UV / AQI arc gauge cells ─────────────────────────────── */
+.gauge-cell-body {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  overflow: hidden;
-  min-width: 0;
+  justify-content: center;
+  min-height: 0;
 }
+.gauge-cell-body svg { width: 100%; height: auto; }
 
-/* ── Temperature row specifics ──────────────────────── */
-#temp-hilo {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex-shrink: 0;
-  align-self: center;
-  padding-top: 10px;
-}
+/* ── Wind cell ────────────────────────────────────────────── */
+.wind-body { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 0; }
+.wind-svg-wrap { flex-shrink: 0; }
+.wind-stats { display: flex; flex-direction: column; gap: 8px; }
+.wind-speed { font-size: 30px; font-weight: 200; line-height: 1; color: var(--text); }
+.wind-speed-unit { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.wind-meta { font-size: 11px; color: var(--text-dim); display: flex; flex-direction: column; gap: 4px; }
+.wind-meta b { color: var(--text); font-weight: 400; }
 
-.th-val {
-  font-size: 16px;
-  font-weight: 200;
-  white-space: nowrap;
-  line-height: 1;
-}
+/* ── Sunrise/Sunset cell ──────────────────────────────────── */
+.sun-block  { display: flex; align-items: center; gap: 12px; flex: 1; }
+.sun-icon   { font-size: 38px; line-height: 1; }
+.sun-info   { display: flex; flex-direction: column; gap: 3px; }
+.sun-time   { font-size: 22px; font-weight: 200; line-height: 1; }
+.sun-sublbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; }
+.sun-divider { height: 1px; background: var(--border); flex-shrink: 0; }
+.sun-daylen  { font-size: 11px; color: var(--text-dim); text-align: center; padding: 4px 0; }
 
-.th-hi { color: var(--pink); }
-.th-lo { color: var(--accent); }
+/* ── Hero cell ────────────────────────────────────────────── */
+.hero-cond    { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; justify-content: center; }
+.hero-icon    { font-size: 42px; line-height: 1; }
+.hero-condlbl { font-size: 12px; font-weight: 700; text-transform: uppercase;
+                letter-spacing: 0.1em; color: var(--text-dim); }
+.hero-temp    { font-size: 68px; font-weight: 200; line-height: 1; margin-bottom: 4px; }
 
-/* ── Upcoming row ───────────────────────────────────── */
-#upcoming-inner {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-}
+.temp-range-wrap { width: 100%; margin-bottom: 16px; }
+.temp-range-nums { display: flex; justify-content: space-between; align-items: center;
+                   font-size: 11px; color: var(--text-dim); margin-bottom: 5px; padding: 0 2px; }
+.temp-range-nums .now-lbl { color: var(--text); font-size: 12px; }
+.temp-bar-track    { height: 8px; border-radius: 4px; position: relative;
+                     background: rgba(255,255,255,0.05); }
+.temp-bar-gradient { height: 100%; border-radius: 4px; }
+.temp-dot { position: absolute; top: 50%; width: 13px; height: 13px; border-radius: 50%;
+            background: white; border: 2px solid rgba(0,0,0,0.3);
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px rgba(255,255,255,0.6); }
 
-/* ── Rain · Lightning row ───────────────────────────── */
-#rain-totals {
-  display: flex;
-  gap: 12px;
-  margin-top: 14px;
-  align-self: flex-start;
-  flex-shrink: 0;
-}
+.hero-feels-block { margin-bottom: 14px; }
+.hero-sublabel    { font-size: 9px; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 4px; }
+.hero-feels-val   { font-size: 36px; font-weight: 200; color: var(--text); line-height: 1; }
 
-.rain-total { text-align: center; }
-.rain-total .rain-val {
-  font-size: 16px;
-  font-weight: 200;
-  color: var(--rain);
-  line-height: 1;
-}
-.rain-total .rain-lbl {
-  font-size: 9px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
+.hero-divider { width: 100%; height: 1px; background: var(--border); margin-bottom: 14px; }
 
-#lightning-compact {
-  flex-shrink: 0;
-  font-size: 10px;
-  color: var(--text-dim);
-  line-height: 1.7;
-  white-space: nowrap;
-}
-#lightning-compact .lc-rate {
-  font-size: 16px;
-  font-weight: 200;
-  color: var(--warn);
-}
+.hero-hum-block  { width: 100%; }
+.hero-hum-header { margin-bottom: 6px; }
+.hero-hum-val    { font-size: 24px; font-weight: 200; color: var(--accent2); line-height: 1;
+                   margin-bottom: 8px; }
+.hum-track   { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.05); position: relative; }
+.hum-comfort { position: absolute; top: 0; bottom: 0; border-radius: 4px;
+               background: rgba(0,229,176,0.18); border: 1px solid rgba(0,229,176,0.3); }
+.hum-dot     { position: absolute; top: 50%; width: 13px; height: 13px; border-radius: 50%;
+               background: var(--accent2); transform: translate(-50%, -50%);
+               box-shadow: 0 0 8px rgba(0,229,176,0.5); }
+.hum-range-lbl { display: flex; justify-content: space-between;
+                 font-size: 9px; color: rgba(90,127,168,0.55); margin-top: 4px; }
 
-/* ── Pressure row ───────────────────────────────────── */
-#pressure-val {
-  font-size: 20px;
-  font-weight: 200;
-  color: var(--text);
-  white-space: nowrap;
-  margin-top: 14px;
-  align-self: flex-start;
-}
-
-#pressure-trend {
-  font-size: 10px;
-  color: var(--text-dim);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
+/* ── Pressure cell ────────────────────────────────────────── */
+.pressure-val       { font-size: 28px; font-weight: 200; line-height: 1; margin-bottom: 5px; }
+.pressure-val span  { font-size: 11px; color: var(--text-dim); }
+.pressure-trend-lbl { font-size: 12px; margin-bottom: 8px; }
+.pressure-delta     { font-size: 10px; margin-left: 4px; }
 .trend-rising  { color: var(--warn); }
 .trend-falling { color: var(--rain); }
 .trend-steady  { color: var(--text-dim); }
+.pressure-spark        { flex: 1; min-height: 0; }
+.pressure-spark canvas { display: block; width: 100% !important; height: 100% !important; }
 
-/* ── UV+AQI row ─────────────────────────────────────── */
-#uv-val, #aqi-val {
-  flex-shrink: 0;
-}
-#uv-val .uv-num    { font-size: 14px; font-weight: 200; color: var(--text); line-height: 1; }
-#uv-val .uv-cat    { font-size: 9px;  color: var(--text-dim); }
-#solar-val .sol-num { font-size: 14px; font-weight: 200; color: var(--solar); line-height: 1; }
-#solar-val .sol-lbl { font-size: 9px;  color: var(--text-dim); }
-#aqi-val .aqi-num   { font-size: 14px; font-weight: 200; line-height: 1; }
-#aqi-val .aqi-cat   { font-size: 9px;  }
-#aqi-pollutants    { font-size: 9px;  color: var(--text-dim); line-height: 1.8; }
+/* ── Rain + Lightning cell ────────────────────────────────── */
+.rain-intensity-block { margin-top: 14px; margin-bottom: 10px; }
+.rain-norain    { font-size: 18px; font-weight: 200; color: var(--text-dim); padding: 4px 0 8px; }
+.rain-status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.rain-cat-lbl   { font-size: 17px; font-weight: 700; text-transform: uppercase;
+                  letter-spacing: 0.05em; min-width: 88px; }
+.rain-bar-track { flex: 1; height: 8px; border-radius: 4px;
+                  background: rgba(116,176,255,0.15); overflow: hidden; }
+.rain-bar-fill  { height: 100%; border-radius: 4px; }
+.rain-rate-lbl  { font-size: 13px; color: var(--text-dim); min-width: 76px; text-align: right; }
 
-/* ── Daily forecast row ─────────────────────────────── */
-#daily-cards-main {
-  flex: 1;
-  display: flex;
-  gap: 4px;
-  overflow: hidden;
-  align-self: stretch;
-  padding-top: 16px;
-}
+.rain-totals-row    { display: flex; gap: 0; margin-top: 10px; margin-bottom: 10px; }
+.rain-total         { flex: 1; text-align: center; border-right: 1px solid var(--border); }
+.rain-total:last-child { border-right: none; }
+.rain-val { font-size: 26px; font-weight: 200; color: var(--rain); line-height: 1; }
+.rain-lbl { font-size: 9px; color: var(--text-dim); text-transform: uppercase;
+            letter-spacing: 0.06em; margin-top: 3px; }
 
-.main-day-card {
-  flex: 1;
-  background: var(--bg-row);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  padding: 3px 2px;
-  min-width: 0;
-  overflow: hidden;
-}
+.lightning-row { display: flex; align-items: center; justify-content: center; gap: 8px;
+                 padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--border); }
+.lc-icon   { font-size: 16px; }
+.lc-rate   { font-size: 20px; font-weight: 200; color: var(--warn); line-height: 1; }
+.lc-unit   { font-size: 10px; color: var(--text-dim); }
+.lc-detail { font-size: 11px; color: var(--text-dim); }
 
-.main-day-card.today-card { border-color: var(--accent2); }
+/* ── Moon cell ────────────────────────────────────────────── */
+.moon-body  { flex: 1; display: flex; flex-direction: column; align-items: center;
+              justify-content: center; gap: 7px; }
+.moon-emoji { font-size: 44px; line-height: 1; }
+.moon-phase { font-size: 13px; color: var(--text); font-weight: 300; }
+.moon-times { font-size: 12px; color: var(--text-dim); line-height: 2; text-align: center; }
 
-.mdc-day  { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
-.today-card .mdc-day { color: var(--accent2); }
-.mdc-icon { font-size: 18px; line-height: 1; }
-.mdc-hilo { font-size: 10px; color: var(--text); white-space: nowrap; }
-.mdc-lo   { color: var(--text-dim); }
-.mdc-rain { font-size: 9px; color: var(--rain); }
-
-/* ── Status bar ─────────────────────────────────────── */
+/* ── Status bar ───────────────────────────────────────────── */
 #statusbar {
   height: var(--status-h);
   background: var(--bg-dark);
@@ -379,9 +207,7 @@ html, body {
   flex-shrink: 0;
 }
 
-#statusbar-time {
-  margin-left: auto;
-}
+#statusbar-time { margin-left: auto; }
 
 #exit-btn {
   padding: 0 14px;
@@ -415,7 +241,7 @@ html, body {
   50%       { opacity: 0.25; }
 }
 
-/* ── Loading overlay ─────────────────────────────────── */
+/* ── Loading overlay ──────────────────────────────────────── */
 #loading {
   position: fixed;
   inset: 0;

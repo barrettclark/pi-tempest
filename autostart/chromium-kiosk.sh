@@ -25,6 +25,7 @@ exec chromium-browser \
   --disable-restore-session-state \
   --autoplay-policy=no-user-gesture-required \
   --check-for-update-interval=31536000 \
+  --disk-cache-size=1 \
   --ozone-platform=wayland \
   --enable-features=UseOzonePlatform \
   http://127.0.0.1:8000/

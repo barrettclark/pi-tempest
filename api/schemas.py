@@ -71,3 +71,6 @@ class MoonResponse(BaseModel):
     next_full_moon: str
     next_new_moon: str
     computed_at: int
+    sunrise: Optional[str] = None
+    sunset: Optional[str] = None
+    day_length: Optional[str] = None

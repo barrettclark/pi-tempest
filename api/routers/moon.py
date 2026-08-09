@@ -1,7 +1,8 @@
-"""GET /api/moon — moon phase, rise/set, and upcoming phases via ephem."""
+"""GET /api/moon — moon phase, rise/set, upcoming phases, and sunrise/sunset via ephem."""
 
 import time
 import logging
+import datetime as _dt
 from datetime import timezone
 from zoneinfo import ZoneInfo
 
@@ -68,6 +69,29 @@ def compute_moon() -> dict:
     full_dt = ephem.Date(next_full).datetime().replace(tzinfo=timezone.utc).astimezone(tz_obj)
     new_dt = ephem.Date(next_new).datetime().replace(tzinfo=timezone.utc).astimezone(tz_obj)
 
+    # Sunrise / sunset for today (set observer to local midnight so next_rising = today's sunrise)
+    local_midnight = _dt.datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    sun_obs = ephem.Observer()
+    sun_obs.lat  = config.LAT
+    sun_obs.lon  = config.LON
+    sun_obs.date = ephem.Date(local_midnight.astimezone(timezone.utc).strftime('%Y/%m/%d %H:%M:%S'))
+    sun_obs.pressure = 0
+    sun_obs.horizon  = "-0:34"
+
+    sun = ephem.Sun()
+    sunrise = sunset = day_length = None
+    try:
+        rise_date = sun_obs.next_rising(sun)
+        sunrise   = _ephem_to_local(rise_date, tz)
+        sun_obs.date = rise_date
+        set_date  = sun_obs.next_setting(sun)
+        sunset    = _ephem_to_local(set_date, tz)
+        delta_sec = (float(set_date) - float(rise_date)) * 24 * 3600
+        h, rem    = divmod(int(delta_sec), 3600)
+        day_length = f"{h}h {rem // 60}m"
+    except (ephem.NeverUpError, ephem.AlwaysUpError):
+        pass
+
     return {
         "phase_name": phase_name,
         "emoji": emoji,
@@ -76,6 +100,9 @@ def compute_moon() -> dict:
         "moonset": moonset,
         "next_full_moon": full_dt.strftime("%b %-d"),
         "next_new_moon": new_dt.strftime("%b %-d"),
+        "sunrise": sunrise,
+        "sunset": sunset,
+        "day_length": day_length,
     }
 
 

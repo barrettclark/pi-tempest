@@ -9,88 +9,133 @@
 </head>
 <body>
 
-<!-- ── NOW panel ──────────────────────────────────────── -->
-<div id="panel-now" class="panel">
+<div class="grid">
 
-  <div id="left-panel">
-    <div id="cond-icon">—</div>
-    <div id="cond-desc">—</div>
-    <div id="now-temp">—</div>
-    <div id="now-feelhum">
-      <span id="now-feels">—</span>
-      <span id="now-humidity">—</span>
+  <!-- ── UV Index ────────────────────────────────────────── -->
+  <div class="cell cell-uv">
+    <div class="cell-label"><span class="lbl-icon">☀️</span> UV Index</div>
+    <div class="gauge-cell-body">
+      <svg id="uv-svg" viewBox="0 0 260 110"></svg>
     </div>
-    <div id="rain-intensity" class="hidden">
-      <div id="rain-cat"></div>
-      <div class="rain-meter-track"><div id="rain-meter-fill"></div></div>
-      <div id="rain-rate-val"></div>
-    </div>
-    <div id="wind-gauge-wrap">
-      <svg id="wind-gauge" viewBox="0 0 124 124" width="124" height="124"></svg>
-      <div id="wind-sub">—</div>
-    </div>
-    <div id="moon-mini">—</div>
   </div>
 
-  <div id="right-panel">
-
-    <div class="row row-temp">
-      <div class="row-label">Temperature</div>
-      <div id="temp-hilo">
-        <div class="th-val th-hi">—</div>
-        <div class="th-val th-lo">—</div>
+  <!-- ── Hero (rows 1 + 2) ───────────────────────────────── -->
+  <div class="cell cell-hero">
+    <div class="hero-cond">
+      <div id="hero-icon" class="hero-icon">—</div>
+      <div id="hero-condlbl" class="hero-condlbl">—</div>
+    </div>
+    <div id="hero-temp" class="hero-temp">—</div>
+    <div class="temp-range-wrap">
+      <div class="temp-range-nums">
+        <span id="temp-lo-lbl">—</span>
+        <span id="temp-now-lbl" class="now-lbl"></span>
+        <span id="temp-hi-lbl">—</span>
       </div>
-      <div class="spark-wrap spark-temp"><canvas id="sp-temp"></canvas></div>
-    </div>
-
-    <div class="row row-upcoming">
-      <div class="row-label">Upcoming</div>
-      <div id="upcoming-inner"></div>
-    </div>
-
-    <div class="row row-rainlightning">
-      <div class="row-label">Rain · Lightning</div>
-      <div id="rain-totals"></div>
-      <div class="spark-wrap spark-rain"><canvas id="sp-rain"></canvas></div>
-      <div class="row-divider"></div>
-      <div id="lightning-compact">—</div>
-    </div>
-
-    <div class="row row-pressure">
-      <div class="row-label">Pressure</div>
-      <div id="pressure-val">—</div>
-      <div id="pressure-trend">—</div>
-      <div class="spark-wrap"><canvas id="sp-pressure"></canvas></div>
-    </div>
-
-    <div class="row row-uvaqi">
-      <div class="row-label">UV · Solar · AQI</div>
-      <div class="uvaqi-sec">
-        <svg id="uv-gauge" viewBox="0 0 52 52" width="44" height="44"></svg>
-        <div id="uv-val">—</div>
-      </div>
-      <div class="row-divider"></div>
-      <div class="uvaqi-sec">
-        <div id="solar-val">—</div>
-        <div class="spark-wrap spark-solar"><canvas id="sp-solar"></canvas></div>
-      </div>
-      <div class="row-divider"></div>
-      <div class="uvaqi-sec">
-        <svg id="aqi-gauge" viewBox="0 0 52 52" width="44" height="44"></svg>
-        <div id="aqi-val">—</div>
-        <div id="aqi-pollutants">—</div>
+      <div class="temp-bar-track">
+        <div class="temp-bar-gradient" id="temp-gradient"></div>
+        <div class="temp-dot" id="temp-dot" style="left:50%"></div>
       </div>
     </div>
-
-    <div class="row row-daily">
-      <div class="row-label">5-Day Forecast</div>
-      <div id="daily-cards-main"></div>
+    <div class="hero-feels-block">
+      <div class="hero-sublabel">Feels Like</div>
+      <div id="hero-feels" class="hero-feels-val">—</div>
     </div>
-
+    <div class="hero-divider"></div>
+    <div class="hero-hum-block">
+      <div class="hero-hum-header">
+        <div class="hero-sublabel">Humidity</div>
+        <div id="hero-hum-val" class="hero-hum-val">—</div>
+      </div>
+      <div>
+        <div class="hum-track">
+          <div class="hum-comfort" id="hum-comfort"></div>
+          <div class="hum-dot" id="hum-dot" style="left:50%"></div>
+        </div>
+        <div class="hum-range-lbl">
+          <span>0%</span>
+          <span>30–70% comfort</span>
+          <span>100%</span>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
 
-<!-- ── Status bar ─────────────────────────────────────── -->
+  <!-- ── Air Quality ─────────────────────────────────────── -->
+  <div class="cell cell-aqi">
+    <div class="cell-label"><span class="lbl-icon">🌿</span> Air Quality</div>
+    <div class="gauge-cell-body">
+      <svg id="aqi-svg" viewBox="0 0 260 110"></svg>
+    </div>
+  </div>
+
+  <!-- ── Wind ────────────────────────────────────────────── -->
+  <div class="cell cell-wind">
+    <div class="cell-label"><span class="lbl-icon">🌬️</span> Wind</div>
+    <div class="wind-body">
+      <div class="wind-svg-wrap">
+        <svg id="wind-svg" viewBox="-10 -10 150 150" width="130" height="130"></svg>
+      </div>
+      <div class="wind-stats">
+        <div>
+          <div id="wind-speed" class="wind-speed">—</div>
+          <div id="wind-dir-unit" class="wind-speed-unit">mph</div>
+        </div>
+        <div id="wind-meta" class="wind-meta">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Pressure ────────────────────────────────────────── -->
+  <div class="cell cell-pressure">
+    <div class="cell-label"><span class="lbl-icon">🌡️</span> Pressure</div>
+    <div id="pressure-val" class="pressure-val">—</div>
+    <div id="pressure-trend" class="pressure-trend-lbl">—</div>
+    <div class="pressure-spark"><canvas id="sp-pressure"></canvas></div>
+  </div>
+
+  <!-- ── Sunrise &amp; Sunset ─────────────────────────────── -->
+  <div class="cell cell-sunrise">
+    <div class="cell-label"><span class="lbl-icon">🌅</span> Sunrise &amp; Sunset</div>
+    <div class="sun-block">
+      <div class="sun-icon">🌄</div>
+      <div class="sun-info">
+        <div id="sunrise-time" class="sun-time">—</div>
+        <div class="sun-sublbl">Sunrise</div>
+      </div>
+    </div>
+    <div class="sun-divider"></div>
+    <div class="sun-block">
+      <div class="sun-icon">🌇</div>
+      <div class="sun-info">
+        <div id="sunset-time" class="sun-time">—</div>
+        <div class="sun-sublbl">Sunset</div>
+      </div>
+    </div>
+    <div id="day-length" class="sun-daylen">—</div>
+  </div>
+
+  <!-- ── Rain + Lightning ────────────────────────────────── -->
+  <div class="cell cell-rain">
+    <div class="cell-label"><span class="lbl-icon">🌧️</span> Rain &nbsp;·&nbsp; <span class="lbl-icon">⚡</span> Lightning</div>
+    <div id="rain-intensity-block" class="rain-intensity-block"></div>
+    <div id="rain-totals" class="rain-totals-row"></div>
+    <div id="lightning-row" class="lightning-row"></div>
+  </div>
+
+  <!-- ── Moon ────────────────────────────────────────────── -->
+  <div class="cell cell-moon">
+    <div class="cell-label"><span class="lbl-icon">🌙</span> Moon</div>
+    <div class="moon-body">
+      <div id="moon-emoji" class="moon-emoji">—</div>
+      <div id="moon-phase" class="moon-phase">—</div>
+      <div id="moon-times" class="moon-times">—</div>
+    </div>
+  </div>
+
+</div><!-- /grid -->
+
+<!-- ── Status bar ──────────────────────────────────────────── -->
 <div id="statusbar">
   <span><span id="status-dot" class="dot"></span><span id="status-time">—</span></span>
   <span>Coppell, TX</span>
