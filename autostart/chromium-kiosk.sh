@@ -14,7 +14,9 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
-exec chromium-browser \
+CHROMIUM_BIN=$(command -v chromium-browser || command -v chromium)
+
+exec "$CHROMIUM_BIN" \
   --kiosk \
   --noerrdialogs \
   --disable-infobars \

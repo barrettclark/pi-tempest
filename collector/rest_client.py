@@ -35,8 +35,11 @@ async def get_observations(
         "token": _TOKEN,
         "time_start": time_start,
         "time_end": time_end,
-        "bucket": bucket,
     }
+    # WeatherFlow's API returns obs: null when an explicit bucket=1 is sent,
+    # even though 1-minute buckets are the default when the param is omitted.
+    if bucket != 1:
+        params["bucket"] = bucket
 
     for attempt in range(5):
         try:
