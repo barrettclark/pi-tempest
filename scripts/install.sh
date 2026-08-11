@@ -11,7 +11,7 @@ echo "Installing from: $INSTALL_DIR"
 # ── 1. System packages ────────────────────────────────────────
 echo "Installing system dependencies..."
 sudo apt-get update -q
-sudo apt-get install -y python3-venv python3-pip curl chromium-browser
+sudo apt-get install -y python3-venv python3-pip curl chromium-browser fonts-noto-color-emoji
 
 # ── 2. Python virtual environment ────────────────────────────
 echo "Creating Python venv..."
