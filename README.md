@@ -1,6 +1,6 @@
 # Pi Tempest Weather Dashboard
 
-A single-page touchscreen weather dashboard for the [WeatherFlow Tempest](https://shop.tempest.earth/) station, running on a Raspberry Pi. Displays real-time conditions alongside blended historical and forecast charts — all six metrics visible simultaneously, no tabs, no scrolling.
+A single-page touchscreen weather dashboard for the [WeatherFlow Tempest](https://shop.tempest.earth/) station, running on a Raspberry Pi. A 3×3 grid keeps every metric — conditions, UV, air quality, wind, pressure, sunrise/sunset, rain, lightning, and moon phase — on screen at once, no tabs, no scrolling.
 
 ![Current setup running WeatherFlow_PiConsole](img/IMG_0440.png)
 *Previous setup (WeatherFlow_PiConsole) — replaced by this app*
@@ -9,49 +9,26 @@ A single-page touchscreen weather dashboard for the [WeatherFlow Tempest](https:
 
 ## Screen Layout
 
-The dashboard fills the full 1024×600 display. Every metric is always on screen.
+The dashboard fills the full 1024×600 display as a 3×3 grid (300px / 424px / 300px columns).
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│ TEMPERATURE  │                                                                  │
-│              │  ━━━━━━━━━━━━━━━━━━━━━━━━━━╋╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌          │
-│  62.4°F      │  (12h actual temp + dew pt) NOW  (12h forecast temp)            │
-│  Feels 60°F  │                            ▲                                    │
-│  Dew 55.8°F  │                         62.4°F                                  │
-├──────────────┼─────────────────────────────────────────────────────────────────┤
-│ WIND         │                                                                  │
-│              │  ━━━━━━━━━━━━━━━━━━━━━━━━━━╋╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌          │
-│  2.5 mph NNE │  avg ── gust - - lull ···  NOW  forecast avg ╌╌╌╌╌╌╌╌╌         │
-│  Gust 9.6    │                                                                  │
-├──────────────┼─────────────────────────────────────────────────────────────────┤
-│ PRECIPITATION│                                                                  │
-│              │  ▌▌▌▌  ▌▌▌  ▌▌▌▌▌▌▌▌▌▌▌▌▌▌╋░░░░░░░░░░░░░░░░░░░░░░░░░░          │
-│  0.06" today │  (actual hourly rain bars)  NOW  (forecast precip chance %)     │
-│  24h: 0.06"  │                                                                  │
-├──────────────┼─────────────────────────────────────────────────────────────────┤
-│ BAROMETER    │                                                                  │
-│              │  ━━━━━━━━━━━━━━━━━━━━━━━━━━╋                                   │
-│  29.952" inHg│  (12h actual pressure)      NOW  (history only)                 │
-│  ▼ Falling   │                                                                  │
-├──────────────┼─────────────────────────────────────────────────────────────────┤
-│ SOLAR / UV   │                                                                  │
-│              │  ━━━━━━━━━━━━━━━━━━━━━━━━━━╋╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌          │
-│  180 W/m²    │  (today actual solar W/m²)  NOW  (forecast UV index ╌╌╌╌)      │
-│  UV 1.2      │                                                                  │
-├──────────────┼─────────────────────────────────────────────────────────────────┤
-│ LIGHTNING  0/hr  Last: 1d ago · 21 km  │  ▌  ▌▌  ▌  (24h hourly bars)       │
-├──────────────────────────────────────────────────────────────────────────────  ┤
-│  ● Updated 14:46   Coppell, TX   43,021 obs                                    │
-└─────────────────────────────────────────────────────────────────────────────────┘
-  190px stat block           834px chart area
+┌───────────────┬─────────────────────────┬───────────────┐
+│   UV INDEX    │                         │  AIR QUALITY  │
+│   arc gauge   │                         │   arc gauge   │
+├───────────────┤       CONDITIONS        ├───────────────┤
+│     WIND      │   icon · temp · range   │   PRESSURE    │
+│  compass +    │   feels like · humidity │  value+trend  │
+│  speed/gust   │   (hero cell, 2 rows)   │  + sparkline  │
+├───────────────┼─────────────────────────┼───────────────┤
+│  SUNRISE &    │   RAIN · LIGHTNING      │     MOON      │
+│    SUNSET     │  intensity meter,       │  phase, rise/ │
+│  + day length │  today/yesterday/7d/yr  │  set times    │
+├───────────────┴─────────────────────────┴───────────────┤
+│  ● Updated 14:46   Coppell, TX   43,021 obs              │
+└────────────────────────────────────────────────────────┘
 ```
 
-**Chart key:**
-- `━━━` Solid line — actual historical data (last 12 hours)
-- `╌╌╌` Dashed line — forecast data (next 12 hours)
-- `▋` Bars — actual hourly accumulation
-- `░` Shaded area — forecast precipitation probability
-- `╋` Vertical dashed line — **NOW** marker (current time)
+The center "hero" cell spans the top two rows and shows current temperature with a color-graded high/low range bar and a humidity comfort band. UV and AQI use SVG semicircle arc gauges; wind uses an SVG compass with a live direction arrow. Pressure has a 12h sparkline drawn on a local (no-CDN) Chart.js.
 
 ---
 
@@ -61,7 +38,7 @@ The dashboard fills the full 1024×600 display. Every metric is always on screen
 |---|---|
 | Computer | Raspberry Pi 4 Model B, 4GB RAM |
 | Display | ROADOM 10.1" IPS, 1024×600, capacitive touch, HDMI |
-| OS | Raspberry Pi OS Bookworm (64-bit), Wayland/labwc |
+| OS | Raspberry Pi OS (Debian 13 "trixie", 64-bit), Wayland/labwc |
 | Weather station | WeatherFlow Tempest |
 
 ---
@@ -84,6 +61,9 @@ WeatherFlow Hub
 │                                                     │
 │  collector/backfill.py  (first run only)            │
 │  └─ REST API → 30 days of history → observations   │
+│     (collector/rest_client.py — omits bucket param;  │
+│      WeatherFlow's API returns obs:null if bucket=1  │
+│      is passed explicitly)                           │
 └──────────────────────┬──────────────────────────────┘
                        │  aiosqlite (WAL mode)
                        ▼
@@ -94,41 +74,51 @@ WeatherFlow Hub
 ┌─────────────────────────────────────────────────────┐
 │  tempest-api  (systemd service)                     │
 │                                                     │
-│  FastAPI + Uvicorn on localhost:8000                │
+│  FastAPI + Uvicorn on 0.0.0.0:8000                  │
 │                                                     │
-│  GET /api/current          latest obs + derived     │
-│  GET /api/history/temperature?hours=12              │
-│  GET /api/history/wind?hours=12                     │
-│  GET /api/history/rain                              │
-│  GET /api/history/pressure?hours=12                 │
-│  GET /api/history/solar                             │
-│  GET /api/history/lightning?hours=24                │
-│  GET /api/forecast         WeatherFlow hourly,      │
-│                            10-min cached            │
-│  GET /api/status           health check             │
-│  GET /                     serves static/           │
+│  GET /api/current                latest obs + derived│
+│  GET /api/history/temperature?hours=12               │
+│  GET /api/history/wind?hours=12                      │
+│  GET /api/history/rain           today/yesterday/    │
+│                                   7-day/year totals   │
+│  GET /api/history/pressure?hours=12                  │
+│  GET /api/history/solar                               │
+│  GET /api/history/lightning?hours=24                 │
+│  GET /api/forecast               WeatherFlow hourly,  │
+│                                   10-min cached        │
+│  GET /api/aqi                    AirNow AQI, cached    │
+│  GET /api/moon                   phase, rise/set,      │
+│                                   sunrise/sunset (ephem)│
+│  GET /api/status                 health check          │
+│  POST /api/exit                  quits kiosk Chromium   │
+│  GET /                           serves static/         │
 └──────────────────────┬──────────────────────────────┘
                        │  HTTP on localhost
                        ▼
 ┌─────────────────────────────────────────────────────┐
 │  Chromium (kiosk mode, --ozone-platform=wayland)    │
 │                                                     │
-│  static/index.html   six-row dashboard              │
-│  static/js/          vanilla JS ES modules          │
-│  ├─ app.js           boot + 60s refresh loop        │
-│  ├─ current.js       stat block rendering           │
-│  ├─ history.js       parallel data fetching         │
-│  └─ charts.js        Chart.js wrappers + NOW plugin │
-│  static/css/         dark theme, 1024×600 layout    │
+│  static/index.html   3×3 grid dashboard shell        │
+│  static/js/           vanilla JS ES modules            │
+│  ├─ app.js            boot, clock tick, refresh loop   │
+│  ├─ now.js            grid rendering, arc/compass SVGs,│
+│  │                    temp gradient, rain categorization│
+│  ├─ forecast.js       forecast data handling            │
+│  ├─ upcoming.js       upcoming conditions strip          │
+│  ├─ gauges.js         gauge helper utilities              │
+│  ├─ icons.js          condition → emoji icon mapping       │
+│  ├─ sparklines.js     Chart.js line sparkline (pressure)   │
+│  └─ vendor/           local Chart.js build (no CDN)         │
+│  static/css/          dark theme, 1024×600 grid layout      │
 └─────────────────────────────────────────────────────┘
 ```
 
-### Data flow on each 60-second refresh
+### Data flow on each refresh
 
-1. `history.js` fires 8 parallel `fetch()` calls: `/api/current`, six history endpoints, `/api/forecast`
-2. FastAPI reads from SQLite (history) and WeatherFlow REST (forecast, cached 10 min)
-3. Each chart is updated in-place with `chart.update('none')` — no animation flicker
-4. Stat blocks update with current values; the NOW line redraws at the correct position
+1. `now.js` fires parallel `fetch()` calls: `/api/current`, `/api/history/*`, `/api/forecast`, `/api/aqi`, `/api/moon`
+2. FastAPI reads from SQLite (history), WeatherFlow REST (forecast, 10-min cache), AirNow REST (AQI, cached), and computes sun/moon locally via `ephem`
+3. Arc gauges, compass, and temperature/humidity bars are redrawn as inline SVG; the pressure sparkline updates in-place with `chart.update('none')`
+4. Status bar updates with obs count and last-update time
 
 ### Derived metrics (computed server-side in `api/units.py`)
 
@@ -137,8 +127,9 @@ WeatherFlow Hub
 | Feels Like | NWS heat index (≥80°F) or wind chill (≤50°F, wind ≥3mph) |
 | Dew Point | Magnus formula from temperature + relative humidity |
 | Pressure trend | Slope of last 3h of pressure readings (rising/falling/steady) |
-| Rain today | Sum of `rain_accumulated` since local midnight |
+| Rain today/yesterday/7-day/year | Sums of `rain_accumulated`, WeatherFlow stats API with SQLite fallback |
 | Wind cardinal | 16-point compass from degrees |
+| Sunrise/sunset/day length | `ephem` solar ephemeris for station lat/lon |
 
 ---
 
@@ -166,23 +157,29 @@ pi-tempest/
 │       ├── current.py             # GET /api/current
 │       ├── history.py             # GET /api/history/*
 │       ├── forecast.py            # GET /api/forecast (cached proxy)
+│       ├── aqi.py                 # GET /api/aqi (AirNow, cached)
+│       ├── moon.py                # GET /api/moon (ephem: phase, sun/moon rise/set)
 │       └── status.py              # GET /api/status
 │
 ├── static/
-│   ├── index.html                 # single-page dashboard shell
-│   ├── css/dashboard.css          # dark theme, row layout, touch targets
+│   ├── index.html                 # 3×3 grid dashboard shell
+│   ├── css/dashboard.css          # dark theme, grid layout, arc/gauge styling
 │   └── js/
-│       ├── app.js                 # boot, 60s refresh loop
-│       ├── current.js             # stat block updates
-│       ├── history.js             # parallel fetch + chart dispatch
-│       └── charts.js              # Chart.js configs + NOW-line plugin
+│       ├── app.js                 # boot, clock, refresh loop
+│       ├── now.js                 # grid rendering, SVG gauges/compass, sparkline wiring
+│       ├── forecast.js            # forecast data handling
+│       ├── upcoming.js            # upcoming conditions strip
+│       ├── gauges.js              # gauge helpers
+│       ├── icons.js               # condition → emoji mapping
+│       ├── sparklines.js          # Chart.js sparkline helper
+│       └── vendor/                # local Chart.js build (no CDN dependency)
 │
 ├── systemd/
 │   ├── tempest-collector.service
 │   └── tempest-api.service
 │
 ├── autostart/
-│   └── chromium-kiosk.sh          # waits for API, launches Chromium
+│   └── chromium-kiosk.sh          # waits for API, launches Chromium kiosk
 │
 └── scripts/
     └── install.sh                 # one-shot installer
@@ -219,15 +216,16 @@ Additional tables: `rapid_wind` (3s wind, 24h retention), `lightning_events`, `r
 
 ### Prerequisites
 
-- Raspberry Pi 4 running Raspberry Pi OS Bookworm (64-bit)
+- Raspberry Pi 4 running Raspberry Pi OS (Bookworm or trixie, 64-bit)
 - Wayland/labwc desktop environment
 - WeatherFlow Tempest hub on the same local network
 - WeatherFlow Personal Access Token ([create one here](https://tempestwx.com/settings/tokens))
+- AirNow.gov API key for AQI data ([sign up here](https://docs.airnowapi.org/account/request/)) — optional, AQI cell degrades gracefully without it
 
 ### 1. Copy the project to the Pi
 
 ```bash
-rsync -av --exclude '.git' --exclude 'data/' \
+rsync -av --exclude '.git' --exclude 'data/' --exclude '.venv' \
   /path/to/pi-tempest/ \
   barrettclark@<pi-ip>:/home/barrettclark/pi-tempest/
 ```
@@ -251,6 +249,9 @@ DB_PATH=/home/barrettclark/pi-tempest/data/tempest.db
 UDP_PORT=50222
 API_HOST=127.0.0.1
 API_PORT=8000
+AIRNOW_API_KEY=your_airnow_key_here
+LAT=32.97
+LON=-96.99
 ```
 
 To find your station and device IDs:
@@ -265,7 +266,7 @@ bash scripts/install.sh
 ```
 
 This will:
-- Install system packages (`python3-venv`, `chromium-browser`, `curl`)
+- Install system packages (`python3-venv`, `chromium-browser`, `curl`, `fonts-noto-color-emoji` — the emoji font isn't preinstalled on a stock trixie image and is required for the dashboard's label icons to render)
 - Create a Python virtual environment and install dependencies
 - Enable and start both systemd services
 - Add the Chromium kiosk launch to `~/.config/labwc/autostart`
@@ -286,7 +287,7 @@ This takes a few minutes. The dashboard works immediately but charts will fill i
 sudo reboot
 ```
 
-The dashboard should appear automatically when the desktop loads.
+The dashboard should appear automatically when the desktop loads. If the kiosk shows a blank/grey screen on a fresh image, it's almost always Chromium's first-run "Choose password for new keyring" dialog blocking the window — `chromium-kiosk.sh` passes `--password-store=basic` to skip it. The script also auto-detects whether the system binary is `chromium-browser` or `chromium`, since the package name varies by image.
 
 ---
 
@@ -316,9 +317,10 @@ sudo systemctl restart tempest-collector tempest-api
 | fastapi | 0.115.6 | Web framework |
 | uvicorn[standard] | 0.32.1 | ASGI server |
 | aiosqlite | 0.20.0 | Async SQLite |
-| httpx | 0.28.1 | Async HTTP client (REST API + forecast) |
+| httpx | 0.28.1 | Async HTTP client (REST API + forecast + AQI) |
 | python-dotenv | 1.0.1 | .env loading |
-| Chart.js | 4.4.6 | Charts (loaded from CDN) |
+| ephem | 4.2.1 | Sun/moon ephemeris (phase, rise/set, sunrise/sunset) |
+| Chart.js | 4.4.6 | Pressure sparkline (bundled locally, no CDN) |
 
 ---
 
@@ -327,3 +329,5 @@ sudo systemctl restart tempest-collector tempest-api
 - [UDP Broadcast spec v171](https://weatherflow.github.io/Tempest/api/udp/v171/)
 - [REST API reference](https://apidocs.tempestwx.com/reference/quick-start)
 - [WebSocket API](https://weatherflow.github.io/Tempest/api/ws.html)
+
+**Known API quirk:** the `/observations/device/{id}` REST endpoint returns `obs: null` if `bucket=1` is passed explicitly, even though 1-minute buckets are the default when the parameter is omitted entirely. `collector/rest_client.py` omits the param for `bucket=1` requests to work around this.
