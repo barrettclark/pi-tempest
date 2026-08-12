@@ -2,7 +2,10 @@
 
 A single-page touchscreen weather dashboard for the [WeatherFlow Tempest](https://shop.tempest.earth/) station, running on a Raspberry Pi. A 3×3 grid keeps every metric — conditions, UV, air quality, wind, pressure, sunrise/sunset, rain, lightning, and moon phase — on screen at once, no tabs, no scrolling.
 
-![Current setup running WeatherFlow_PiConsole](img/IMG_0440.png)
+![Current dashboard](img/dashboard-current.png)
+*Current dashboard — 3×3 grid layout*
+
+![Previous setup running WeatherFlow_PiConsole](img/IMG_0440.png)
 *Previous setup (WeatherFlow_PiConsole) — replaced by this app*
 
 ---
@@ -24,8 +27,8 @@ The dashboard fills the full 1024×600 display as a 3×3 grid (300px / 424px / 3
 │    SUNSET     │  intensity meter,       │  phase, rise/ │
 │  + day length │  today/yesterday/7d/yr  │  set times    │
 ├───────────────┴─────────────────────────┴───────────────┤
-│  ● Updated 14:46   Coppell, TX   43,021 obs              │
-└────────────────────────────────────────────────────────┘
+│  ● Updated 14:46   Coppell, TX   43,021 obs             │
+└─────────────────────────────────────────────────────────┘
 ```
 
 The center "hero" cell spans the top two rows and shows current temperature with a color-graded high/low range bar and a humidity comfort band. UV and AQI use SVG semicircle arc gauges; wind uses an SVG compass with a live direction arrow. Pressure has a 12h sparkline drawn on a local (no-CDN) Chart.js.
@@ -60,10 +63,10 @@ WeatherFlow Hub
 │  └─ evt_precip        → rain_events table           │
 │                                                     │
 │  collector/backfill.py  (first run only)            │
-│  └─ REST API → 30 days of history → observations   │
-│     (collector/rest_client.py — omits bucket param;  │
-│      WeatherFlow's API returns obs:null if bucket=1  │
-│      is passed explicitly)                           │
+│  └─ REST API → 30 days of history → observations    │
+│     (collector/rest_client.py — omits bucket param; │
+│      WeatherFlow's API returns obs:null if bucket=1 │
+│      is passed explicitly)                          │
 └──────────────────────┬──────────────────────────────┘
                        │  aiosqlite (WAL mode)
                        ▼
@@ -71,46 +74,46 @@ WeatherFlow Hub
                        │
                        │  async reads
                        ▼
-┌─────────────────────────────────────────────────────┐
-│  tempest-api  (systemd service)                     │
-│                                                     │
-│  FastAPI + Uvicorn on 0.0.0.0:8000                  │
-│                                                     │
-│  GET /api/current                latest obs + derived│
-│  GET /api/history/temperature?hours=12               │
-│  GET /api/history/wind?hours=12                      │
-│  GET /api/history/rain           today/yesterday/    │
-│                                   7-day/year totals   │
-│  GET /api/history/pressure?hours=12                  │
-│  GET /api/history/solar                               │
-│  GET /api/history/lightning?hours=24                 │
-│  GET /api/forecast               WeatherFlow hourly,  │
-│                                   10-min cached        │
-│  GET /api/aqi                    AirNow AQI, cached    │
-│  GET /api/moon                   phase, rise/set,      │
+┌─────────────────────────────────────────────────────────┐
+│  tempest-api  (systemd service)                         │
+│                                                         │
+│  FastAPI + Uvicorn on 0.0.0.0:8000                      │
+│                                                         │
+│  GET /api/current                latest obs + derived   │
+│  GET /api/history/temperature?hours=12                  │
+│  GET /api/history/wind?hours=12                         │
+│  GET /api/history/rain           today/yesterday/       │
+│                                   7-day/year totals     │
+│  GET /api/history/pressure?hours=12                     │
+│  GET /api/history/solar                                 │
+│  GET /api/history/lightning?hours=24                    │
+│  GET /api/forecast               WeatherFlow hourly,    │
+│                                   10-min cached         │
+│  GET /api/aqi                    AirNow AQI, cached     │
+│  GET /api/moon                   phase, rise/set,       │
 │                                   sunrise/sunset (ephem)│
-│  GET /api/status                 health check          │
+│  GET /api/status                 health check           │
 │  POST /api/exit                  quits kiosk Chromium   │
 │  GET /                           serves static/         │
-└──────────────────────┬──────────────────────────────┘
+└──────────────────────┬──────────────────────────────────┘
                        │  HTTP on localhost
                        ▼
-┌─────────────────────────────────────────────────────┐
-│  Chromium (kiosk mode, --ozone-platform=wayland)    │
-│                                                     │
-│  static/index.html   3×3 grid dashboard shell        │
-│  static/js/           vanilla JS ES modules            │
-│  ├─ app.js            boot, clock tick, refresh loop   │
-│  ├─ now.js            grid rendering, arc/compass SVGs,│
-│  │                    temp gradient, rain categorization│
-│  ├─ forecast.js       forecast data handling            │
+┌──────────────────────────────────────────────────────────┐
+│  Chromium (kiosk mode, --ozone-platform=wayland)         │
+│                                                          │
+│  static/index.html   3×3 grid dashboard shell            │
+│  static/js/           vanilla JS ES modules              │
+│  ├─ app.js            boot, clock tick, refresh loop     │
+│  ├─ now.js            grid rendering, arc/compass SVGs,  │
+│  │                    temp gradient, rain categorization │
+│  ├─ forecast.js       forecast data handling             │
 │  ├─ upcoming.js       upcoming conditions strip          │
-│  ├─ gauges.js         gauge helper utilities              │
-│  ├─ icons.js          condition → emoji icon mapping       │
-│  ├─ sparklines.js     Chart.js line sparkline (pressure)   │
-│  └─ vendor/           local Chart.js build (no CDN)         │
-│  static/css/          dark theme, 1024×600 grid layout      │
-└─────────────────────────────────────────────────────┘
+│  ├─ gauges.js         gauge helper utilities             │
+│  ├─ icons.js          condition → emoji icon mapping     │
+│  ├─ sparklines.js     Chart.js line sparkline (pressure) │
+│  └─ vendor/           local Chart.js build (no CDN)      │
+│  static/css/          dark theme, 1024×600 grid layout   │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ### Data flow on each refresh
@@ -227,14 +230,16 @@ Additional tables: `rapid_wind` (3s wind, 24h retention), `lightning_events`, `r
 ```bash
 rsync -av --exclude '.git' --exclude 'data/' --exclude '.venv' \
   /path/to/pi-tempest/ \
-  barrettclark@<pi-ip>:/home/barrettclark/pi-tempest/
+  <user>@<pi-ip>:/home/<user>/pi-tempest/
 ```
+
+**NOTE:** `<user>` and `<pi-ip>` should be swapped out with their actual values.
 
 ### 2. Configure credentials
 
 On the Pi:
 ```bash
-cd /home/barrettclark/pi-tempest
+cd /home/<user>/pi-tempest
 cp .env.example .env
 nano .env
 ```
@@ -245,7 +250,7 @@ WEATHERFLOW_TOKEN=your_token_here
 STATION_ID=your_station_id
 DEVICE_ID=your_tempest_device_id
 TZ=America/Chicago
-DB_PATH=/home/barrettclark/pi-tempest/data/tempest.db
+DB_PATH=/home/<user>/pi-tempest/data/tempest.db
 UDP_PORT=50222
 API_HOST=127.0.0.1
 API_PORT=8000
@@ -305,7 +310,7 @@ journalctl -u tempest-api -f
 sudo systemctl restart tempest-collector tempest-api
 
 # Manually launch kiosk (without reboot)
-/home/barrettclark/pi-tempest/autostart/chromium-kiosk.sh
+/home/<user>/pi-tempest/autostart/chromium-kiosk.sh
 ```
 
 ---
