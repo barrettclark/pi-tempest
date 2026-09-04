@@ -33,6 +33,8 @@ py-modules = ["config"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Frozen planning docs — ruff 0.16+ formats fenced code blocks in Markdown.
+extend-exclude = ["docs/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
