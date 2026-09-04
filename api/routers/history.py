@@ -6,14 +6,13 @@ Down-sampling uses GROUP BY bucket to cap point counts.
 """
 
 import time
-from typing import Optional
 
 import aiosqlite
 import httpx
 from fastapi import APIRouter, Depends, Query
 
-from api.deps import get_db
 from api import units
+from api.deps import get_db
 
 router = APIRouter()
 
@@ -23,6 +22,7 @@ _STATS_TTL = 1800  # 30 minutes
 
 async def _fetch_wf_stats() -> dict:
     import config as _config
+
     now = time.time()
     if _stats_cache["data"] and now - _stats_cache["fetched_at"] < _STATS_TTL:
         return _stats_cache["data"]
@@ -36,7 +36,7 @@ async def _fetch_wf_stats() -> dict:
     return data
 
 
-def _round_none(v, digits=1) -> Optional[float]:
+def _round_none(v, digits=1) -> float | None:
     return round(v, digits) if v is not None else None
 
 
@@ -79,16 +79,18 @@ async def get_temperature_history(
 async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
     from datetime import datetime
     from zoneinfo import ZoneInfo
+
     import config as _config
 
     now = int(time.time())
-    since_hourly = now - 86400       # last 24h for hourly
-    since_daily  = now - 30 * 86400  # last 30 days for daily
+    since_hourly = now - 86400  # last 24h for hourly
+    since_daily = now - 30 * 86400  # last 30 days for daily
 
-    local_tz  = ZoneInfo(_config.TIMEZONE)
+    local_tz = ZoneInfo(_config.TIMEZONE)
     now_local = datetime.now(tz=local_tz)
-    month_start = int(now_local.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
-    year_start  = int(now_local.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
+    year_start = int(
+        now_local.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
+    )
 
     # Hourly buckets
     cursor = await db.execute(
@@ -122,36 +124,47 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
 
     # Period totals from WeatherFlow stats API (full history, not limited to local DB)
     import datetime as _dt
-    yesterday_str  = (now_local - _dt.timedelta(days=1)).strftime("%Y-%m-%d")
-    seven_day_strs = {
-        (now_local - _dt.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)
-    }
+
+    yesterday_str = (now_local - _dt.timedelta(days=1)).strftime("%Y-%m-%d")
+    seven_day_strs = {(now_local - _dt.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)}
     y = now_local.strftime("%Y")
 
     try:
         stats = await _fetch_wf_stats()
-        rain_yesterday_in = round(sum(
-            r[28] for r in stats["stats_day"]
-            if r[0] == yesterday_str and r[28] is not None
-        ) / 25.4, 2)
-        rain_7day_in = round(sum(
-            r[28] for r in stats["stats_day"]
-            if r[0] in seven_day_strs and r[28] is not None
-        ) / 25.4, 2)
-        rain_year_in = round(sum(
-            r[28] for r in stats["stats_day"]
-            if r[0].startswith(y) and r[28] is not None
-        ) / 25.4, 2)
+        rain_yesterday_in = round(
+            sum(r[28] for r in stats["stats_day"] if r[0] == yesterday_str and r[28] is not None)
+            / 25.4,
+            2,
+        )
+        rain_7day_in = round(
+            sum(r[28] for r in stats["stats_day"] if r[0] in seven_day_strs and r[28] is not None)
+            / 25.4,
+            2,
+        )
+        rain_year_in = round(
+            sum(r[28] for r in stats["stats_day"] if r[0].startswith(y) and r[28] is not None)
+            / 25.4,
+            2,
+        )
     except Exception:
         # Fall back to SQLite on API failure
-        yesterday_start = int((now_local - _dt.timedelta(days=1))
-                              .replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
-        seven_days_start = int((now_local - _dt.timedelta(days=7))
-                               .replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+        yesterday_start = int(
+            (now_local - _dt.timedelta(days=1))
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+            .timestamp()
+        )
+        seven_days_start = int(
+            (now_local - _dt.timedelta(days=7))
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+            .timestamp()
+        )
 
         cursor = await db.execute(
             "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :s AND epoch < :e AND rain_accumulated IS NOT NULL",
-            {"s": yesterday_start, "e": int(now_local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())},
+            {
+                "s": yesterday_start,
+                "e": int(now_local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()),
+            },
         )
         row = await cursor.fetchone()
         rain_yesterday_in = round(units.mm_to_in(row[0] or 0), 2)
@@ -171,13 +184,13 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
         rain_year_in = round(units.mm_to_in(row[0] or 0), 2)
 
     return {
-        "hourly_labels":    [r[0] for r in hourly_rows],
-        "hourly_rain_in":   [round(units.mm_to_in(r[1]), 3) for r in hourly_rows],
-        "daily_labels":     [r[0] for r in daily_rows],
-        "daily_rain_in":    [round(units.mm_to_in(r[1]), 3) for r in daily_rows],
+        "hourly_labels": [r[0] for r in hourly_rows],
+        "hourly_rain_in": [round(units.mm_to_in(r[1]), 3) for r in hourly_rows],
+        "daily_labels": [r[0] for r in daily_rows],
+        "daily_rain_in": [round(units.mm_to_in(r[1]), 3) for r in daily_rows],
         "rain_yesterday_in": rain_yesterday_in,
-        "rain_7day_in":      rain_7day_in,
-        "rain_year_in":      rain_year_in,
+        "rain_7day_in": rain_7day_in,
+        "rain_year_in": rain_year_in,
     }
 
 
@@ -202,7 +215,7 @@ async def get_pressure_history(
     )
     rows = await cursor.fetchall()
     return {
-        "labels":        [r[0] for r in rows],
+        "labels": [r[0] for r in rows],
         "pressure_inhg": [_round_none(units.mb_to_inhg(r[1]), 3) for r in rows],
     }
 
@@ -230,10 +243,10 @@ async def get_wind_history(
     )
     rows = await cursor.fetchall()
     return {
-        "labels":         [r[0] for r in rows],
-        "wind_avg_mph":   [_round_none(units.ms_to_mph(r[1])) for r in rows],
-        "wind_gust_mph":  [_round_none(units.ms_to_mph(r[2])) for r in rows],
-        "wind_lull_mph":  [_round_none(units.ms_to_mph(r[3])) for r in rows],
+        "labels": [r[0] for r in rows],
+        "wind_avg_mph": [_round_none(units.ms_to_mph(r[1])) for r in rows],
+        "wind_gust_mph": [_round_none(units.ms_to_mph(r[2])) for r in rows],
+        "wind_lull_mph": [_round_none(units.ms_to_mph(r[3])) for r in rows],
     }
 
 
@@ -242,7 +255,9 @@ async def get_solar_history(db: aiosqlite.Connection = Depends(get_db)):
     """Today's solar radiation and UV, from midnight local time."""
     from datetime import datetime
     from zoneinfo import ZoneInfo
+
     import config
+
     now_local = datetime.now(tz=ZoneInfo(config.TIMEZONE))
     midnight = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     since = int(midnight.timestamp())
@@ -263,9 +278,9 @@ async def get_solar_history(db: aiosqlite.Connection = Depends(get_db)):
     )
     rows = await cursor.fetchall()
     return {
-        "labels":               [r[0] for r in rows],
-        "solar_radiation_wm2":  [_round_none(r[1]) for r in rows],
-        "uv_index":             [_round_none(r[2]) for r in rows],
+        "labels": [r[0] for r in rows],
+        "solar_radiation_wm2": [_round_none(r[1]) for r in rows],
+        "uv_index": [_round_none(r[2]) for r in rows],
     }
 
 
@@ -290,7 +305,7 @@ async def get_lightning_history(
     )
     rows = await cursor.fetchall()
     return {
-        "labels":          [r[0] for r in rows],
-        "strike_count":    [r[1] for r in rows],
+        "labels": [r[0] for r in rows],
+        "strike_count": [r[1] for r in rows],
         "avg_distance_km": [_round_none(r[2]) for r in rows],
     }

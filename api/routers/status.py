@@ -17,9 +17,7 @@ async def get_status(db: aiosqlite.Connection = Depends(get_db)):
     row = await cursor.fetchone()
     row_count = row[0]
 
-    cursor = await db.execute(
-        "SELECT epoch FROM observations ORDER BY epoch DESC LIMIT 1"
-    )
+    cursor = await db.execute("SELECT epoch FROM observations ORDER BY epoch DESC LIMIT 1")
     last = await cursor.fetchone()
     last_epoch = last[0] if last else None
     age = int(time.time()) - last_epoch if last_epoch else None

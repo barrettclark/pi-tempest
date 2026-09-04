@@ -18,15 +18,15 @@ Routes:
 """
 
 import asyncio
-from contextlib import asynccontextmanager
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from api.routers import current, history, status, forecast, aqi, moon
+from api.routers import aqi, current, forecast, history, moon, status
 
 log = logging.getLogger("tempest.api")
 
@@ -34,6 +34,7 @@ log = logging.getLogger("tempest.api")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from collector.db import init_schema
+
     await init_schema()
     log.info("Database schema ready.")
     yield
@@ -52,9 +53,7 @@ app.include_router(status.router, prefix="/api")
 @app.post("/api/exit")
 async def exit_kiosk():
     """Kill the Chromium kiosk browser so the desktop becomes accessible."""
-    asyncio.get_event_loop().call_later(
-        0.5, lambda: asyncio.create_task(_kill_browser())
-    )
+    asyncio.get_event_loop().call_later(0.5, lambda: asyncio.create_task(_kill_browser()))
     return JSONResponse({"ok": True})
 
 

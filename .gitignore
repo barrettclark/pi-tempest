@@ -2,6 +2,12 @@
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
 .env
 data/
 *.db
@@ -10,3 +16,7 @@ data/
 .claude/
 TODO.txt
 *.txt
+
+# setuptools build artifacts
+build/
+dist/

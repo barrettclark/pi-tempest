@@ -1,6 +1,7 @@
 """Shared FastAPI dependencies."""
 
 import aiosqlite
+
 from config import DB_PATH
 
 

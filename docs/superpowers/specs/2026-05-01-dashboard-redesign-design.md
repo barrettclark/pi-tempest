@@ -1,5 +1,5 @@
 # Dashboard Redesign — Design Spec
-**Date:** 2026-05-01  
+**Date:** 2026-05-01
 **Status:** Approved for implementation
 
 ---
@@ -8,7 +8,7 @@
 
 Replace the current single-page chart-row layout with a gauge-and-sparkline dashboard that displays richer at-a-glance data. Two tabs: **Now** (always-visible current conditions) and **Forecast** (hourly + daily + moon). A third tab (weather map) is deferred.
 
-Screen: 1024×600px, fixed, no scroll, Chromium kiosk on Raspberry Pi 4.  
+Screen: 1024×600px, fixed, no scroll, Chromium kiosk on Raspberry Pi 4.
 All times displayed in **12-hour format** (2:32 PM, not 14:32).
 
 ---

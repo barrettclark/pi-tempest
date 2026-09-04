@@ -1,0 +1,52 @@
+[project]
+name = "pi-tempest"
+version = "0.1.0"
+description = "Custom Raspberry Pi weather dashboard for a WeatherFlow Tempest station"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.32.1",
+    "aiosqlite==0.20.0",
+    "httpx==0.28.1",
+    "python-dotenv==1.0.1",
+    "ephem==4.2.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.5",
+    "pytest-asyncio==0.24.0",
+    "pytest-cov==6.0.0",
+    "mypy==1.14.1",
+    "ruff==0.9.2",
+    "pre-commit==4.0.1",
+]
+
+[tool.setuptools]
+packages = ["api", "api.routers", "collector"]
+py-modules = ["config"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+# The formatter owns line length; E501 only nags about strings it can't split.
+ignore = ["E501"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+# FastAPI uses `Depends(...)` / `Query(...)` as argument defaults by design.
+"api/**" = ["B008"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--cov=api --cov=collector --cov-report=term-missing"
+testpaths = ["tests"]

@@ -74,7 +74,10 @@ async def run() -> None:
 
         log.info(
             "Fetching day %d/%d (epoch %d → %d)...",
-            days - day_offset + 1, days, day_start, day_end,
+            days - day_offset + 1,
+            days,
+            day_start,
+            day_end,
         )
 
         obs_arrays = await get_observations(
@@ -99,7 +102,9 @@ async def run() -> None:
         if rows:
             inserted = await db.insert_observation_batch(rows, source="rest")
             total_inserted += inserted
-            log.info("  Inserted %d/%d rows (total so far: %d)", inserted, len(rows), total_inserted)
+            log.info(
+                "  Inserted %d/%d rows (total so far: %d)", inserted, len(rows), total_inserted
+            )
 
         # Brief pause between day-requests to be a good API citizen
         await asyncio.sleep(2)

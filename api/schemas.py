@@ -1,6 +1,5 @@
 """Pydantic response models."""
 
-from typing import Optional
 from pydantic import BaseModel
 
 
@@ -13,31 +12,31 @@ class RapidWind(BaseModel):
 class CurrentResponse(BaseModel):
     epoch: int
     timestamp_local: str
-    temperature_f: Optional[float]
-    feels_like_f: Optional[float]
-    dew_point_f: Optional[float]
-    humidity_pct: Optional[float]
-    pressure_inhg: Optional[float]
+    temperature_f: float | None
+    feels_like_f: float | None
+    dew_point_f: float | None
+    humidity_pct: float | None
+    pressure_inhg: float | None
     pressure_trend: str
-    wind_avg_mph: Optional[float]
-    wind_gust_mph: Optional[float]
-    wind_lull_mph: Optional[float]
-    wind_direction_deg: Optional[int]
-    wind_direction_cardinal: Optional[str]
+    wind_avg_mph: float | None
+    wind_gust_mph: float | None
+    wind_lull_mph: float | None
+    wind_direction_deg: int | None
+    wind_direction_cardinal: str | None
     rain_today_in: float
-    rain_rate_in_hr: Optional[float]
-    uv_index: Optional[float]
-    solar_radiation_wm2: Optional[float]
+    rain_rate_in_hr: float | None
+    uv_index: float | None
+    solar_radiation_wm2: float | None
     lightning_count_1h: int
-    lightning_last_epoch: Optional[int]
-    lightning_last_distance_km: Optional[int]
-    battery_v: Optional[float]
-    rapid_wind: Optional[RapidWind]
+    lightning_last_epoch: int | None
+    lightning_last_distance_km: int | None
+    battery_v: float | None
+    rapid_wind: RapidWind | None
 
 
 class TimeSeriesResponse(BaseModel):
     labels: list[int]
-    datasets: dict[str, list[Optional[float]]]
+    datasets: dict[str, list[float | None]]
 
 
 class RainResponse(BaseModel):
@@ -49,16 +48,16 @@ class RainResponse(BaseModel):
 
 class StatusResponse(BaseModel):
     db_row_count: int
-    last_obs_epoch: Optional[int]
-    last_obs_age_seconds: Optional[int]
+    last_obs_epoch: int | None
+    last_obs_age_seconds: int | None
     backfill_complete: bool
 
 
 class AqiResponse(BaseModel):
-    aqi: Optional[int]
-    category: Optional[str]
-    pm25_aqi: Optional[int]
-    ozone_aqi: Optional[int]
+    aqi: int | None
+    category: str | None
+    pm25_aqi: int | None
+    ozone_aqi: int | None
     fetched_at: int
 
 
@@ -66,11 +65,11 @@ class MoonResponse(BaseModel):
     phase_name: str
     emoji: str
     illumination_pct: float
-    moonrise: Optional[str]
-    moonset: Optional[str]
+    moonrise: str | None
+    moonset: str | None
     next_full_moon: str
     next_new_moon: str
     computed_at: int
-    sunrise: Optional[str] = None
-    sunset: Optional[str] = None
-    day_length: Optional[str] = None
+    sunrise: str | None = None
+    sunset: str | None = None
+    day_length: str | None = None
