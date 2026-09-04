@@ -211,6 +211,7 @@ async def backfill_needed() -> bool:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute("SELECT COUNT(*) FROM backfill_log")
         row = await cursor.fetchone()
+        assert row is not None  # COUNT always returns a row
         return row[0] == 0
 
 
@@ -235,4 +236,5 @@ async def get_row_count() -> int:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute("SELECT COUNT(*) FROM observations")
         row = await cursor.fetchone()
+        assert row is not None  # COUNT always returns a row
         return row[0]

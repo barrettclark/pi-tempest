@@ -15,6 +15,7 @@ router = APIRouter()
 async def get_status(db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute("SELECT COUNT(*) FROM observations")
     row = await cursor.fetchone()
+    assert row is not None  # COUNT always returns a row
     row_count = row[0]
 
     cursor = await db.execute("SELECT epoch FROM observations ORDER BY epoch DESC LIMIT 1")
@@ -24,6 +25,7 @@ async def get_status(db: aiosqlite.Connection = Depends(get_db)):
 
     cursor = await db.execute("SELECT COUNT(*) FROM backfill_log")
     bf_row = await cursor.fetchone()
+    assert bf_row is not None  # COUNT always returns a row
     backfill_complete = bf_row[0] > 0
 
     return StatusResponse(

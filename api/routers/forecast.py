@@ -64,7 +64,7 @@ def _convert_daily(d: dict) -> dict:
 
 async def _fetch_forecast() -> dict:
     url = f"{config.WEATHERFLOW_API_BASE}/better_forecast"
-    params = {"station_id": config.STATION_ID, "token": config.TOKEN}
+    params: dict[str, str | int] = {"station_id": config.STATION_ID, "token": config.TOKEN}
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.get(url, params=params)

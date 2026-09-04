@@ -1,7 +1,7 @@
 """GET /api/current — latest observation + derived fields."""
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 
 import aiosqlite
 from fastapi import APIRouter, Depends
@@ -14,6 +14,7 @@ from api.schemas import CurrentResponse, RapidWind
 router = APIRouter()
 
 # America/Chicago offset (handles CDT/CST automatically via stdlib)
+_TZ: tzinfo
 try:
     from zoneinfo import ZoneInfo
 
@@ -38,7 +39,7 @@ async def _pressure_trend(db: aiosqlite.Connection) -> str:
         """,
         (three_hours_ago,),
     )
-    rows = await cursor.fetchall()
+    rows = list(await cursor.fetchall())
     if len(rows) < 2:
         return "steady"
 
@@ -69,6 +70,7 @@ async def _rain_today(db: aiosqlite.Connection) -> float:
         (midnight_epoch,),
     )
     row = await cursor.fetchone()
+    assert row is not None  # SUM always returns a row
     total_mm = row[0] or 0.0
     return units.mm_to_in(total_mm)
 
@@ -81,6 +83,7 @@ async def _lightning_1h(db: aiosqlite.Connection) -> tuple[int, int | None, int 
         (one_hour_ago,),
     )
     row = await cursor.fetchone()
+    assert row is not None  # COUNT always returns a row
     count = row[0]
 
     cursor = await db.execute(

@@ -44,6 +44,7 @@ def feels_like_f(temp_c: float | None, rh: float | None, wind_ms: float | None) 
     if temp_c is None:
         return None
     temp_f = c_to_f(temp_c)
+    assert temp_f is not None  # temp_c is not None, so c_to_f returns a float
 
     if temp_f >= 80 and rh is not None:
         # Rothfusz heat index

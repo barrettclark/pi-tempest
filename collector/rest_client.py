@@ -30,7 +30,7 @@ async def get_observations(
     bucket=1 means 1-minute resolution (the finest available).
     """
     url = f"{_BASE}/observations/device/{device_id}"
-    params = {
+    params: dict[str, str | int] = {
         "token": _TOKEN,
         "time_start": time_start,
         "time_end": time_end,

@@ -340,7 +340,7 @@ pip install -e ".[dev]"
 pre-commit install     # ruff + gitleaks on every commit
 
 ruff check . && ruff format --check .   # lint + format
-mypy api collector config.py            # type check (advisory)
+mypy api collector config.py            # type check
 pytest                                  # tests + coverage
 ```
 

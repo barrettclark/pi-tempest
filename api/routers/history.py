@@ -167,6 +167,7 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
             },
         )
         row = await cursor.fetchone()
+        assert row is not None  # SUM always returns a row
         rain_yesterday_in = round(units.mm_to_in(row[0] or 0), 2)
 
         cursor = await db.execute(
@@ -174,6 +175,7 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
             {"since": seven_days_start},
         )
         row = await cursor.fetchone()
+        assert row is not None  # SUM always returns a row
         rain_7day_in = round(units.mm_to_in(row[0] or 0), 2)
 
         cursor = await db.execute(
@@ -181,6 +183,7 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
             {"since": year_start},
         )
         row = await cursor.fetchone()
+        assert row is not None  # SUM always returns a row
         rain_year_in = round(units.mm_to_in(row[0] or 0), 2)
 
     return {
