@@ -55,7 +55,7 @@ class TempestProtocol(asyncio.DatagramProtocol):
     def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
 
-    def connection_made(self, transport: asyncio.DatagramTransport) -> None:  # type: ignore[override]
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self._transport = transport
         log.info("UDP socket open on port %d", config.UDP_PORT)
 

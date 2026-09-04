@@ -53,7 +53,7 @@ app.include_router(status.router, prefix="/api")
 @app.post("/api/exit")
 async def exit_kiosk():
     """Kill the Chromium kiosk browser so the desktop becomes accessible."""
-    asyncio.get_event_loop().call_later(0.5, lambda: asyncio.create_task(_kill_browser()))
+    asyncio.get_running_loop().call_later(0.5, lambda: asyncio.create_task(_kill_browser()))
     return JSONResponse({"ok": True})
 
 
