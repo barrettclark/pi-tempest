@@ -1,22 +1,23 @@
 """GET /api/current — latest observation + derived fields."""
 
 import time
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+from datetime import datetime, timedelta, timezone, tzinfo
 
 import aiosqlite
 from fastapi import APIRouter, Depends
 
 import config
+from api import units
 from api.deps import get_db
 from api.schemas import CurrentResponse, RapidWind
-from api import units
 
 router = APIRouter()
 
 # America/Chicago offset (handles CDT/CST automatically via stdlib)
+_TZ: tzinfo
 try:
     from zoneinfo import ZoneInfo
+
     _TZ = ZoneInfo(config.TIMEZONE)
 except Exception:
     _TZ = timezone(timedelta(hours=-5))  # fallback to CST
@@ -38,7 +39,7 @@ async def _pressure_trend(db: aiosqlite.Connection) -> str:
         """,
         (three_hours_ago,),
     )
-    rows = await cursor.fetchall()
+    rows = list(await cursor.fetchall())
     if len(rows) < 2:
         return "steady"
 
@@ -69,11 +70,12 @@ async def _rain_today(db: aiosqlite.Connection) -> float:
         (midnight_epoch,),
     )
     row = await cursor.fetchone()
+    assert row is not None  # SUM always returns a row
     total_mm = row[0] or 0.0
     return units.mm_to_in(total_mm)
 
 
-async def _lightning_1h(db: aiosqlite.Connection) -> tuple[int, Optional[int], Optional[int]]:
+async def _lightning_1h(db: aiosqlite.Connection) -> tuple[int, int | None, int | None]:
     """Returns (count_1h, last_epoch, last_distance_km)."""
     one_hour_ago = int(time.time()) - 3600
     cursor = await db.execute(
@@ -81,6 +83,7 @@ async def _lightning_1h(db: aiosqlite.Connection) -> tuple[int, Optional[int], O
         (one_hour_ago,),
     )
     row = await cursor.fetchone()
+    assert row is not None  # COUNT always returns a row
     count = row[0]
 
     cursor = await db.execute(
@@ -92,9 +95,7 @@ async def _lightning_1h(db: aiosqlite.Connection) -> tuple[int, Optional[int], O
     return count, None, None
 
 
-def _compute_rain_rate_in_hr(
-    rain_mm, report_interval_min
-):
+def _compute_rain_rate_in_hr(rain_mm, report_interval_min):
     """Rain rate in in/hr from accumulated mm in one reporting interval."""
     if not rain_mm:
         return None
@@ -115,13 +116,26 @@ async def get_current(db: aiosqlite.Connection = Depends(get_db)):
         return CurrentResponse(
             epoch=0,
             timestamp_local="—",
-            temperature_f=None, feels_like_f=None, dew_point_f=None,
-            humidity_pct=None, pressure_inhg=None, pressure_trend="steady",
-            wind_avg_mph=None, wind_gust_mph=None, wind_lull_mph=None,
-            wind_direction_deg=None, wind_direction_cardinal=None,
-            rain_today_in=0.0, rain_rate_in_hr=None, uv_index=None, solar_radiation_wm2=None,
-            lightning_count_1h=0, lightning_last_epoch=None,
-            lightning_last_distance_km=None, battery_v=None, rapid_wind=None,
+            temperature_f=None,
+            feels_like_f=None,
+            dew_point_f=None,
+            humidity_pct=None,
+            pressure_inhg=None,
+            pressure_trend="steady",
+            wind_avg_mph=None,
+            wind_gust_mph=None,
+            wind_lull_mph=None,
+            wind_direction_deg=None,
+            wind_direction_cardinal=None,
+            rain_today_in=0.0,
+            rain_rate_in_hr=None,
+            uv_index=None,
+            solar_radiation_wm2=None,
+            lightning_count_1h=0,
+            lightning_last_epoch=None,
+            lightning_last_distance_km=None,
+            battery_v=None,
+            rapid_wind=None,
         )
 
     # Rapid wind (most recent)
@@ -160,9 +174,7 @@ async def get_current(db: aiosqlite.Connection = Depends(get_db)):
         wind_direction_deg=row["wind_direction"],
         wind_direction_cardinal=units.degrees_to_cardinal(row["wind_direction"]),
         rain_today_in=rain_today,
-        rain_rate_in_hr=_compute_rain_rate_in_hr(
-            row["rain_accumulated"], row["report_interval"]
-        ),
+        rain_rate_in_hr=_compute_rain_rate_in_hr(row["rain_accumulated"], row["report_interval"]),
         uv_index=row["uv"],
         solar_radiation_wm2=row["solar_radiation"],
         lightning_count_1h=lightning_count,

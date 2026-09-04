@@ -17,7 +17,7 @@ sudo apt-get install -y python3-venv python3-pip curl chromium-browser fonts-not
 echo "Creating Python venv..."
 python3 -m venv "$INSTALL_DIR/.venv"
 "$INSTALL_DIR/.venv/bin/pip" install --upgrade pip
-"$INSTALL_DIR/.venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+"$INSTALL_DIR/.venv/bin/pip" install "$INSTALL_DIR"
 
 # ── 3. Create data directory ──────────────────────────────────
 mkdir -p "$INSTALL_DIR/data"

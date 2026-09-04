@@ -1,4 +1,3 @@
-import pytest
 from api.routers.aqi import _parse_airnow_response
 
 

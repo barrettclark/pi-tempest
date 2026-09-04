@@ -5,9 +5,10 @@ All inserts use INSERT OR IGNORE on the unique epoch index so both
 the UDP listener and the REST backfill are naturally idempotent.
 """
 
-import asyncio
 import time
+
 import aiosqlite
+
 from config import DB_PATH
 
 _CREATE_OBSERVATIONS = """
@@ -102,6 +103,7 @@ CREATE TABLE IF NOT EXISTS backfill_log (
 async def init_schema() -> None:
     """Create all tables and indexes. Safe to call multiple times."""
     import os
+
     os.makedirs(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".", exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("PRAGMA journal_mode=WAL;")
@@ -209,6 +211,7 @@ async def backfill_needed() -> bool:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute("SELECT COUNT(*) FROM backfill_log")
         row = await cursor.fetchone()
+        assert row is not None  # COUNT always returns a row
         return row[0] == 0
 
 
@@ -224,9 +227,7 @@ async def record_backfill(days_fetched: int, rows_inserted: int) -> None:
 
 async def get_last_observation_epoch() -> int | None:
     async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute(
-            "SELECT epoch FROM observations ORDER BY epoch DESC LIMIT 1"
-        )
+        cursor = await db.execute("SELECT epoch FROM observations ORDER BY epoch DESC LIMIT 1")
         row = await cursor.fetchone()
         return row[0] if row else None
 
@@ -235,4 +236,5 @@ async def get_row_count() -> int:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute("SELECT COUNT(*) FROM observations")
         row = await cursor.fetchone()
+        assert row is not None  # COUNT always returns a row
         return row[0]

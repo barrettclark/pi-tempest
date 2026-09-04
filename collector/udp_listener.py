@@ -30,24 +30,24 @@ def _parse_obs_st(obs_array: list) -> dict:
     Any field that is None in the packet is preserved as None.
     """
     return {
-        "epoch":                    obs_array[0],
-        "wind_lull":                obs_array[1],
-        "wind_avg":                 obs_array[2],
-        "wind_gust":                obs_array[3],
-        "wind_direction":           obs_array[4],
-        "wind_sample_interval":     obs_array[5],
-        "station_pressure":         obs_array[6],
-        "air_temperature":          obs_array[7],
-        "relative_humidity":        obs_array[8],
-        "illuminance":              obs_array[9],
-        "uv":                       obs_array[10],
-        "solar_radiation":          obs_array[11],
-        "rain_accumulated":         obs_array[12],
-        "precipitation_type":       obs_array[13],
-        "lightning_avg_distance":   obs_array[14],
-        "lightning_count":          obs_array[15],
-        "battery":                  obs_array[16],
-        "report_interval":          obs_array[17] if len(obs_array) > 17 else None,
+        "epoch": obs_array[0],
+        "wind_lull": obs_array[1],
+        "wind_avg": obs_array[2],
+        "wind_gust": obs_array[3],
+        "wind_direction": obs_array[4],
+        "wind_sample_interval": obs_array[5],
+        "station_pressure": obs_array[6],
+        "air_temperature": obs_array[7],
+        "relative_humidity": obs_array[8],
+        "illuminance": obs_array[9],
+        "uv": obs_array[10],
+        "solar_radiation": obs_array[11],
+        "rain_accumulated": obs_array[12],
+        "precipitation_type": obs_array[13],
+        "lightning_avg_distance": obs_array[14],
+        "lightning_count": obs_array[15],
+        "battery": obs_array[16],
+        "report_interval": obs_array[17] if len(obs_array) > 17 else None,
     }
 
 
@@ -55,7 +55,7 @@ class TempestProtocol(asyncio.DatagramProtocol):
     def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
 
-    def connection_made(self, transport: asyncio.DatagramTransport) -> None:
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self._transport = transport
         log.info("UDP socket open on port %d", config.UDP_PORT)
 
@@ -107,7 +107,9 @@ class TempestProtocol(asyncio.DatagramProtocol):
         try:
             obs = _parse_obs_st(obs_array)
             await db.insert_observation(obs, source="udp")
-            log.debug("obs_st stored: epoch=%s temp=%.1f°C", obs["epoch"], obs["air_temperature"] or 0)
+            log.debug(
+                "obs_st stored: epoch=%s temp=%.1f°C", obs["epoch"], obs["air_temperature"] or 0
+            )
         except Exception as exc:
             log.error("Failed to store obs_st: %s", exc)
 

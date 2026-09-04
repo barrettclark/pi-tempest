@@ -1,6 +1,7 @@
 import pytest
-from api.routers.current import _compute_rain_rate_in_hr
+
 from api import units
+from api.routers.current import _compute_rain_rate_in_hr
 
 
 def test_rain_rate_half_mm_per_minute():

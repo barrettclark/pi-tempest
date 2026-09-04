@@ -6,7 +6,6 @@ Handles rate-limit responses (HTTP 429) with exponential backoff.
 
 import asyncio
 import logging
-import time
 
 import httpx
 
@@ -31,7 +30,7 @@ async def get_observations(
     bucket=1 means 1-minute resolution (the finest available).
     """
     url = f"{_BASE}/observations/device/{device_id}"
-    params = {
+    params: dict[str, str | int] = {
         "token": _TOKEN,
         "time_start": time_start,
         "time_end": time_end,
@@ -47,7 +46,7 @@ async def get_observations(
                 resp = await client.get(url, params=params)
 
             if resp.status_code == 429:
-                wait = 60 * (2 ** attempt)
+                wait = 60 * (2**attempt)
                 log.warning("Rate limited (429). Waiting %ds before retry %d...", wait, attempt + 1)
                 await asyncio.sleep(wait)
                 continue
@@ -60,7 +59,7 @@ async def get_observations(
             log.error("HTTP error fetching observations: %s", exc)
             return []
         except httpx.RequestError as exc:
-            wait = 5 * (2 ** attempt)
+            wait = 5 * (2**attempt)
             log.warning("Request error (%s). Retrying in %ds...", exc, wait)
             await asyncio.sleep(wait)
 

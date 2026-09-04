@@ -1,7 +1,7 @@
 """GET /api/aqi — proxies AirNow.gov current AQI for Coppell TX (zip 75019)."""
 
-import time
 import logging
+import time
 
 import httpx
 from fastapi import APIRouter
@@ -20,9 +20,7 @@ def _parse_airnow_response(data: list) -> dict:
     if not data:
         return {"aqi": None, "category": None, "pm25_aqi": None, "ozone_aqi": None}
     overall = max(data, key=lambda x: x.get("AQI", 0))
-    pm25_aqi = next(
-        (x["AQI"] for x in data if "PM2.5" in x.get("ParameterName", "")), None
-    )
+    pm25_aqi = next((x["AQI"] for x in data if "PM2.5" in x.get("ParameterName", "")), None)
     ozone_aqi = next(
         (x["AQI"] for x in data if "OZONE" in x.get("ParameterName", "").upper()), None
     )
@@ -58,7 +56,12 @@ async def get_aqi():
         except Exception as exc:
             log.error("AQI fetch failed: %s", exc)
             if _cache["data"] is None:
-                _cache["data"] = {"aqi": None, "category": None, "pm25_aqi": None, "ozone_aqi": None}
+                _cache["data"] = {
+                    "aqi": None,
+                    "category": None,
+                    "pm25_aqi": None,
+                    "ozone_aqi": None,
+                }
         _cache["fetched_at"] = int(now)
 
     return AqiResponse(fetched_at=int(_cache["fetched_at"]), **_cache["data"])

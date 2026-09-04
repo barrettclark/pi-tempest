@@ -141,7 +141,7 @@ WeatherFlow Hub
 ```
 pi-tempest/
 ├── config.py                      # loads .env, single source of truth
-├── requirements.txt
+├── pyproject.toml                 # deps + ruff / mypy / pytest config
 ├── .env                           # secrets — never committed
 ├── .env.example                   # template
 │
@@ -326,6 +326,27 @@ sudo systemctl restart tempest-collector tempest-api
 | python-dotenv | 1.0.1 | .env loading |
 | ephem | 4.2.1 | Sun/moon ephemeris (phase, rise/set, sunrise/sunset) |
 | Chart.js | 4.4.6 | Pressure sparkline (bundled locally, no CDN) |
+
+Runtime deps and their pins live in `pyproject.toml` (`[project.dependencies]`).
+Dev tooling is the `dev` extra: `pip install -e ".[dev]"`.
+
+---
+
+## Development
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pre-commit install     # ruff + gitleaks on every commit
+
+ruff check . && ruff format --check .   # lint + format
+mypy api collector config.py            # type check
+pytest                                  # tests + coverage
+```
+
+CI (`.github/workflows/`) runs the same checks on every push and PR, plus a
+gitleaks secret scan. The default branch requires a PR with an automated
+Copilot review before merge.
 
 ---
 
