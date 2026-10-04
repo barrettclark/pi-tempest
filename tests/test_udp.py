@@ -125,3 +125,13 @@ async def test_event_packets_reject_missing_or_null_fields(events, packet):
 async def test_precip_accepts_valid_event(events):
     await _deliver({"type": "evt_precip", "serial_number": "ST-00000512", "evt": [_NOW]})
     assert events["rain"] == [_NOW]
+
+
+async def test_rapid_wind_accepts_valid_packet(events):
+    await _deliver({"type": "rapid_wind", "serial_number": "ST-00000512", "ob": [_NOW, 1.5, 270]})
+    assert events["wind"] == [(_NOW, 1.5, 270)]
+
+
+async def test_strike_accepts_valid_packet(events):
+    await _deliver({"type": "evt_strike", "serial_number": "ST-00000512", "evt": [_NOW, 5, 1000]})
+    assert events["lightning"] == [(_NOW, 5, 1000)]
