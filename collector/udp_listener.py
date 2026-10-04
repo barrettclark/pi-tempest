@@ -13,7 +13,6 @@ All other packet types are silently ignored.
 import asyncio
 import json
 import logging
-import math
 import sys
 import time
 
@@ -25,7 +24,7 @@ log = logging.getLogger("tempest.udp")
 
 SENSOR_TYPES = ("obs_st", "rapid_wind", "evt_strike", "evt_precip")
 _MIN_EPOCH = 946_684_800  # 2000-01-01; rejects zeroed or garbage timestamps
-_SQLITE_INT_MIN, _SQLITE_INT_MAX = -(2**63), 2**63 - 1
+_NUM_LIMIT = 1e9  # far beyond any real sensor value; keeps unit conversions finite
 _FUTURE_SLACK_S = 300  # tolerate modest clock skew between hub and Pi
 
 _tasks: set[asyncio.Task] = set()
@@ -60,11 +59,12 @@ def _parse_obs_st(obs_array: list) -> dict:
 
 
 def _is_number(v: object) -> bool:
-    if isinstance(v, bool):
-        return False
-    if isinstance(v, int):
-        return _SQLITE_INT_MIN <= v <= _SQLITE_INT_MAX  # math.isfinite would overflow on huge ints
-    return isinstance(v, float) and math.isfinite(v)
+    # Comparison is exact for huge ints and false for NaN, so no isfinite check is needed.
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and abs(v) <= _NUM_LIMIT
+
+
+def _is_direction(v: object) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool) and 0 <= v <= 360
 
 
 def _is_num_or_none(v: object) -> bool:
@@ -149,6 +149,9 @@ class TempestProtocol(asyncio.DatagramProtocol):
         if not _is_epoch(obs_array[0]) or not all(_is_num_or_none(v) for v in obs_array[1:18]):
             log.warning("obs_st rejected: invalid epoch or non-numeric field")
             return
+        if obs_array[4] is not None and not _is_direction(obs_array[4]):
+            log.warning("obs_st rejected: wind direction must be an integer 0-360")
+            return
 
         try:
             obs = _parse_obs_st(obs_array)
@@ -163,8 +166,8 @@ class TempestProtocol(asyncio.DatagramProtocol):
         ob = packet.get("ob")
         if not isinstance(ob, list) or len(ob) < 3:
             return
-        if not _is_epoch(ob[0]) or not (_is_number(ob[1]) and _is_number(ob[2])):
-            log.warning("rapid_wind rejected: invalid epoch or non-numeric field")
+        if not _is_epoch(ob[0]) or not (_is_number(ob[1]) and _is_direction(ob[2])):
+            log.warning("rapid_wind rejected: invalid epoch, speed, or direction")
             return
         try:
             await db.insert_rapid_wind(
