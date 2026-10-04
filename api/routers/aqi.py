@@ -19,7 +19,7 @@ _CACHE_TTL = 1800  # 30 minutes
 def _parse_airnow_response(data: list) -> dict:
     if not data:
         return {"aqi": None, "category": None, "pm25_aqi": None, "ozone_aqi": None}
-    overall = max(data, key=lambda x: x.get("nowcastAQI") or 0)
+    overall = max(data, key=lambda x: (x.get("nowcastAQI") is not None, x.get("nowcastAQI") or 0))
     pm25_aqi = next((x["nowcastAQI"] for x in data if "PM2.5" in x.get("parameterName", "")), None)
     ozone_aqi = next(
         (x["nowcastAQI"] for x in data if "OZONE" in x.get("parameterName", "").upper()), None

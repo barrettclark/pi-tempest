@@ -84,3 +84,16 @@ async def test_aqi_keeps_last_good_data_and_redacts_key(
     assert stale.aqi == 42
     assert stale.fetched_at == expired_at
     assert "secret-airnow-key" not in caplog.text
+
+
+async def test_aqi_requests_ziplatlong_endpoint(mock_upstream, fresh_caches):
+    seen: list[httpx.Request] = []
+
+    def handler(req):
+        seen.append(req)
+        return httpx.Response(200, json=_AQI_OK)
+
+    mock_upstream(handler)
+    await aqi.get_aqi()
+    assert seen[0].url.path == "/aq/observation/current/ziplatlong/"
+    assert seen[0].url.params["zipCode"] == "75019"

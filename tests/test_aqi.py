@@ -34,3 +34,13 @@ def test_parse_null_aqi_does_not_crash():
     result = _parse_airnow_response(data)
     assert result["aqi"] == 20
     assert result["pm25_aqi"] is None
+
+
+def test_parse_valid_zero_beats_null():
+    data = [
+        {"parameterName": "PM2.5", "nowcastAQI": None, "aqiCategoryName": None},
+        {"parameterName": "OZONE", "nowcastAQI": 0, "aqiCategoryName": "Good"},
+    ]
+    result = _parse_airnow_response(data)
+    assert result["aqi"] == 0
+    assert result["category"] == "Good"
