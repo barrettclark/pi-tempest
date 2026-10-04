@@ -359,6 +359,7 @@ function _updateRain(rainData, c) {
       [fmt(c?.rain_today_in),           'Today'],
       [fmt(rainData.rain_yesterday_in), 'Yesterday'],
       [fmt(rainData.rain_7day_in),      '7-Day'],
+      [fmt(rainData.rain_month_in),     'Month'],
       [fmt(rainData.rain_year_in),      'Year'],
     ];
     document.getElementById('rain-totals').replaceChildren(
