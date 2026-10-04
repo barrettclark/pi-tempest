@@ -25,7 +25,7 @@ The dashboard fills the full 1024×600 display as a 3×3 grid (300px / 424px / 3
 ├───────────────┼─────────────────────────┼───────────────┤
 │  SUNRISE &    │   RAIN · LIGHTNING      │     MOON      │
 │    SUNSET     │  intensity meter,       │  phase, rise/ │
-│  + day length │  today/yesterday/7d/yr  │  set times    │
+│  + day length │  today/yest/7d/mo/yr    │  set times    │
 ├───────────────┴─────────────────────────┴───────────────┤
 │  ● Updated 14:46   Coppell, TX   43,021 obs             │
 └─────────────────────────────────────────────────────────┘
@@ -83,7 +83,7 @@ WeatherFlow Hub
 │  GET /api/history/temperature?hours=12                  │
 │  GET /api/history/wind?hours=12                         │
 │  GET /api/history/rain           today/yesterday/       │
-│                                   7-day/year totals     │
+│                                   7-day/month/year      │
 │  GET /api/history/pressure?hours=12                     │
 │  GET /api/history/solar                                 │
 │  GET /api/history/lightning?hours=24                    │
@@ -128,7 +128,7 @@ WeatherFlow Hub
 | Feels Like | NWS heat index (≥80°F) or wind chill (≤50°F, wind ≥3mph) |
 | Dew Point | Magnus formula from temperature + relative humidity |
 | Pressure trend | Slope of last 3h of pressure readings (rising/falling/steady) |
-| Rain today/yesterday/7-day/year | Sums of `rain_accumulated`, WeatherFlow stats API with SQLite fallback |
+| Rain today/yesterday/7-day/month/year | Sums of `rain_accumulated`, WeatherFlow stats API with SQLite fallback |
 | Wind cardinal | 16-point compass from degrees |
 | Sunrise/sunset/day length | `ephem` solar ephemeris for station lat/lon |
 
