@@ -77,6 +77,18 @@ async def get_temperature_history(
     return {"labels": labels, "temperature_f": temp_f, "dew_point_f": dew_f}
 
 
+async def _sum_rain_in(db: aiosqlite.Connection, since: int, until: int | None = None) -> float:
+    sql = "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :since AND rain_accumulated IS NOT NULL"
+    params: dict[str, int] = {"since": since}
+    if until is not None:
+        sql += " AND epoch < :until"
+        params["until"] = until
+    cursor = await db.execute(sql, params)
+    row = await cursor.fetchone()
+    assert row is not None  # SUM always returns a row
+    return round(units.mm_to_in(row[0] or 0), 2)
+
+
 @router.get("/rain")
 async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
     from datetime import datetime
@@ -130,6 +142,7 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
     yesterday_str = (now_local - _dt.timedelta(days=1)).strftime("%Y-%m-%d")
     seven_day_strs = {(now_local - _dt.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)}
     y = now_local.strftime("%Y")
+    ym = now_local.strftime("%Y-%m")
 
     try:
         stats = await _fetch_wf_stats()
@@ -148,6 +161,11 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
             / 25.4,
             2,
         )
+        rain_month_in = round(
+            sum(r[28] for r in stats["stats_day"] if r[0].startswith(ym) and r[28] is not None)
+            / 25.4,
+            2,
+        )
     except Exception as exc:
         log.warning("WeatherFlow stats unavailable (%s); using local data", type(exc).__name__)
         # Fall back to SQLite on API failure
@@ -162,32 +180,14 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
             .timestamp()
         )
 
-        cursor = await db.execute(
-            "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :s AND epoch < :e AND rain_accumulated IS NOT NULL",
-            {
-                "s": yesterday_start,
-                "e": int(now_local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()),
-            },
+        today_start = int(now_local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+        month_start = int(
+            now_local.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
         )
-        row = await cursor.fetchone()
-        assert row is not None  # SUM always returns a row
-        rain_yesterday_in = round(units.mm_to_in(row[0] or 0), 2)
-
-        cursor = await db.execute(
-            "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :since AND rain_accumulated IS NOT NULL",
-            {"since": seven_days_start},
-        )
-        row = await cursor.fetchone()
-        assert row is not None  # SUM always returns a row
-        rain_7day_in = round(units.mm_to_in(row[0] or 0), 2)
-
-        cursor = await db.execute(
-            "SELECT SUM(rain_accumulated) FROM observations WHERE epoch >= :since AND rain_accumulated IS NOT NULL",
-            {"since": year_start},
-        )
-        row = await cursor.fetchone()
-        assert row is not None  # SUM always returns a row
-        rain_year_in = round(units.mm_to_in(row[0] or 0), 2)
+        rain_yesterday_in = await _sum_rain_in(db, yesterday_start, until=today_start)
+        rain_7day_in = await _sum_rain_in(db, seven_days_start)
+        rain_month_in = await _sum_rain_in(db, month_start)
+        rain_year_in = await _sum_rain_in(db, year_start)
 
     return {
         "hourly_labels": [r[0] for r in hourly_rows],
@@ -196,6 +196,7 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
         "daily_rain_in": [round(units.mm_to_in(r[1]), 3) for r in daily_rows],
         "rain_yesterday_in": rain_yesterday_in,
         "rain_7day_in": rain_7day_in,
+        "rain_month_in": rain_month_in,
         "rain_year_in": rain_year_in,
     }
 
