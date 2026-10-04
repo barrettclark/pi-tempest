@@ -53,15 +53,12 @@ async def get_aqi():
         log.info("Refreshing AQI cache...")
         try:
             _cache["data"] = await _fetch_aqi()
+            _cache["fetched_at"] = int(now)
+        except httpx.HTTPStatusError as exc:
+            # Exception text includes the request URL, which carries the API key.
+            log.error("AQI fetch failed: HTTP %d", exc.response.status_code)
         except Exception as exc:
-            log.error("AQI fetch failed: %s", exc)
-            if _cache["data"] is None:
-                _cache["data"] = {
-                    "aqi": None,
-                    "category": None,
-                    "pm25_aqi": None,
-                    "ozone_aqi": None,
-                }
-        _cache["fetched_at"] = int(now)
+            log.error("AQI fetch failed: %s", type(exc).__name__)
 
-    return AqiResponse(fetched_at=int(_cache["fetched_at"]), **_cache["data"])
+    data = _cache["data"] or {"aqi": None, "category": None, "pm25_aqi": None, "ozone_aqi": None}
+    return AqiResponse(fetched_at=int(_cache["fetched_at"]), **data)

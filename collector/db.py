@@ -9,7 +9,7 @@ import time
 
 import aiosqlite
 
-from config import DB_PATH
+from config import DB_PATH, DB_TIMEOUT
 
 _CREATE_OBSERVATIONS = """
 CREATE TABLE IF NOT EXISTS observations (
@@ -100,12 +100,28 @@ CREATE TABLE IF NOT EXISTS backfill_log (
 """
 
 
+_INSERT_OBSERVATION = """
+INSERT OR IGNORE INTO observations
+    (epoch, source, wind_lull, wind_avg, wind_gust, wind_direction,
+     wind_sample_interval, station_pressure, air_temperature,
+     relative_humidity, illuminance, uv, solar_radiation,
+     rain_accumulated, precipitation_type, lightning_avg_distance,
+     lightning_count, battery, report_interval, inserted_at)
+VALUES
+    (:epoch, :source, :wind_lull, :wind_avg, :wind_gust, :wind_direction,
+     :wind_sample_interval, :station_pressure, :air_temperature,
+     :relative_humidity, :illuminance, :uv, :solar_radiation,
+     :rain_accumulated, :precipitation_type, :lightning_avg_distance,
+     :lightning_count, :battery, :report_interval, :inserted_at)
+"""
+
+
 async def init_schema() -> None:
     """Create all tables and indexes. Safe to call multiple times."""
     import os
 
     os.makedirs(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".", exist_ok=True)
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
         await db.execute("PRAGMA journal_mode=WAL;")
         await db.execute("PRAGMA synchronous=NORMAL;")
         for stmt in (
@@ -126,59 +142,25 @@ async def init_schema() -> None:
 
 async def insert_observation(obs: dict, source: str = "udp") -> None:
     now = int(time.time())
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            """
-            INSERT OR IGNORE INTO observations
-                (epoch, source, wind_lull, wind_avg, wind_gust, wind_direction,
-                 wind_sample_interval, station_pressure, air_temperature,
-                 relative_humidity, illuminance, uv, solar_radiation,
-                 rain_accumulated, precipitation_type, lightning_avg_distance,
-                 lightning_count, battery, report_interval, inserted_at)
-            VALUES
-                (:epoch, :source, :wind_lull, :wind_avg, :wind_gust, :wind_direction,
-                 :wind_sample_interval, :station_pressure, :air_temperature,
-                 :relative_humidity, :illuminance, :uv, :solar_radiation,
-                 :rain_accumulated, :precipitation_type, :lightning_avg_distance,
-                 :lightning_count, :battery, :report_interval, :inserted_at)
-            """,
-            {**obs, "source": source, "inserted_at": now},
-        )
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
+        await db.execute(_INSERT_OBSERVATION, {**obs, "source": source, "inserted_at": now})
         await db.commit()
 
 
 async def insert_observation_batch(rows: list[dict], source: str = "rest") -> int:
     """Insert a batch of observation dicts. Returns count of rows inserted."""
     now = int(time.time())
-    inserted = 0
-    async with aiosqlite.connect(DB_PATH) as db:
-        for obs in rows:
-            cursor = await db.execute(
-                """
-                INSERT OR IGNORE INTO observations
-                    (epoch, source, wind_lull, wind_avg, wind_gust, wind_direction,
-                     wind_sample_interval, station_pressure, air_temperature,
-                     relative_humidity, illuminance, uv, solar_radiation,
-                     rain_accumulated, precipitation_type, lightning_avg_distance,
-                     lightning_count, battery, report_interval, inserted_at)
-                VALUES
-                    (:epoch, :source, :wind_lull, :wind_avg, :wind_gust, :wind_direction,
-                     :wind_sample_interval, :station_pressure, :air_temperature,
-                     :relative_humidity, :illuminance, :uv, :solar_radiation,
-                     :rain_accumulated, :precipitation_type, :lightning_avg_distance,
-                     :lightning_count, :battery, :report_interval, :inserted_at)
-                """,
-                {**obs, "source": source, "inserted_at": now},
-            )
-            inserted += cursor.rowcount
+    params = [{**obs, "source": source, "inserted_at": now} for obs in rows]
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
+        cursor = await db.executemany(_INSERT_OBSERVATION, params)
         await db.commit()
-    return inserted
+    return cursor.rowcount
 
 
 async def insert_rapid_wind(epoch: int, speed: float, direction: int) -> None:
     now = int(time.time())
     cutoff = now - 86400  # keep only last 24h
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
         await db.execute(
             "INSERT INTO rapid_wind (epoch, wind_speed, wind_direction, inserted_at) VALUES (?, ?, ?, ?)",
             (epoch, speed, direction, now),
@@ -189,7 +171,7 @@ async def insert_rapid_wind(epoch: int, speed: float, direction: int) -> None:
 
 async def insert_lightning(epoch: int, distance: int, energy: int) -> None:
     now = int(time.time())
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
         await db.execute(
             "INSERT OR IGNORE INTO lightning_events (epoch, distance, energy, inserted_at) VALUES (?, ?, ?, ?)",
             (epoch, distance, energy, now),
@@ -199,7 +181,7 @@ async def insert_lightning(epoch: int, distance: int, energy: int) -> None:
 
 async def insert_rain_event(epoch: int) -> None:
     now = int(time.time())
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
         await db.execute(
             "INSERT INTO rain_events (epoch, inserted_at) VALUES (?, ?)",
             (epoch, now),
@@ -208,7 +190,7 @@ async def insert_rain_event(epoch: int) -> None:
 
 
 async def backfill_needed() -> bool:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
         cursor = await db.execute("SELECT COUNT(*) FROM backfill_log")
         row = await cursor.fetchone()
         assert row is not None  # COUNT always returns a row
@@ -217,7 +199,7 @@ async def backfill_needed() -> bool:
 
 async def record_backfill(days_fetched: int, rows_inserted: int) -> None:
     now = int(time.time())
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
         await db.execute(
             "INSERT INTO backfill_log (completed_at, days_fetched, rows_inserted) VALUES (?, ?, ?)",
             (now, days_fetched, rows_inserted),
@@ -226,14 +208,14 @@ async def record_backfill(days_fetched: int, rows_inserted: int) -> None:
 
 
 async def get_last_observation_epoch() -> int | None:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
         cursor = await db.execute("SELECT epoch FROM observations ORDER BY epoch DESC LIMIT 1")
         row = await cursor.fetchone()
         return row[0] if row else None
 
 
 async def get_row_count() -> int:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
         cursor = await db.execute("SELECT COUNT(*) FROM observations")
         row = await cursor.fetchone()
         assert row is not None  # COUNT always returns a row

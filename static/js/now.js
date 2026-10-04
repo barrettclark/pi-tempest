@@ -1,7 +1,10 @@
 import { createLineSparkline, updateLineSparkline } from './sparklines.js';
 import { iconEmoji }                                from './icons.js';
+import { fetchJson }                                from './api.js';
 
 const sp = {};
+let lastObsEpoch = null;  // newest observation seen
+let lastOkAt = 0;        // ms timestamp of last successful /api/current
 
 // ── Temperature gradient helpers ──────────────────────────
 const TEMP_STOPS = [
@@ -42,6 +45,8 @@ function _buildGradient(lo, hi) {
 }
 
 // ── Arc gauge — SVG semicircle ────────────────────────────
+const _esc = s => String(s).replace(/[&<>"']/g, ch => `&#${ch.charCodeAt(0)};`);
+
 function _arcGauge(svgId, value, max, valStr, catStr, color) {
   const el = document.getElementById(svgId);
   if (!el) return;
@@ -57,9 +62,9 @@ function _arcGauge(svgId, value, max, valStr, catStr, color) {
       fill="none" stroke="${color}" stroke-width="11" stroke-linecap="round"/>
     <text x="${cx}" y="${cy-26}" text-anchor="middle" dominant-baseline="middle"
       fill="#e8f0fe" font-size="30" font-family="Segoe UI,system-ui,sans-serif"
-      font-weight="200">${valStr}</text>
+      font-weight="200">${_esc(valStr)}</text>
     <text x="${cx}" y="${cy-7}" text-anchor="middle" dominant-baseline="middle"
-      fill="rgba(90,127,168,0.9)" font-size="12" font-family="Segoe UI,system-ui,sans-serif">${catStr}</text>
+      fill="rgba(90,127,168,0.9)" font-size="12" font-family="Segoe UI,system-ui,sans-serif">${_esc(catStr)}</text>
   `;
 }
 
@@ -119,6 +124,14 @@ function _fmtAgo(epoch) {
   return `${Math.floor(s / 3600)}h ago`;
 }
 
+// Builds nodes without innerHTML so API strings are never parsed as markup.
+function _el(tag, text, cls) {
+  const n = document.createElement(tag);
+  if (text != null) n.textContent = text;
+  if (cls) n.className = cls;
+  return n;
+}
+
 function _uvColor(uv) {
   if (uv == null) return '#00e5b0';
   if (uv < 3)  return '#00e5b0';
@@ -167,14 +180,13 @@ export function initNow() {
 
 // ── Refresh ───────────────────────────────────────────────
 export async function refreshNow() {
-  const [cur, tempH, rainH, pressH, forecast, aqi, moonR] = await Promise.allSettled([
-    fetch('/api/current').then(r => r.json()),
-    fetch('/api/history/temperature?hours=24').then(r => r.json()),
-    fetch('/api/history/rain').then(r => r.json()),
-    fetch('/api/history/pressure?hours=6').then(r => r.json()),
-    fetch('/api/forecast').then(r => r.json()),
-    fetch('/api/aqi').then(r => r.json()),
-    fetch('/api/moon').then(r => r.json()),
+  const [cur, rainH, pressH, forecast, aqi, moonR] = await Promise.allSettled([
+    fetchJson('/api/current'),
+    fetchJson('/api/history/rain'),
+    fetchJson('/api/history/pressure?hours=6'),
+    fetchJson('/api/forecast'),
+    fetchJson('/api/aqi'),
+    fetchJson('/api/moon'),
   ]);
 
   const c  = cur.status      === 'fulfilled' ? cur.value      : null;
@@ -182,12 +194,13 @@ export async function refreshNow() {
   const _try = fn => { try { fn(); } catch (e) { console.error(e); } };
 
   if (c) {
+    lastObsEpoch = c.epoch || null;
+    lastOkAt = Date.now();
     _try(() => _updateHero(c, fc));
     _try(() => _updateWind(c));
     _try(() => _updateUV(c));
-    _try(() => _updateStatusBar(c));
   }
-  if (c && tempH.status === 'fulfilled')  _try(() => _updateHeroBar(c, fc.daily));
+  if (c && fc.daily?.length)              _try(() => _updateHeroBar(c, fc.daily));
   if (rainH.status === 'fulfilled')       _try(() => _updateRain(rainH.value, c));
   if (c && pressH.status === 'fulfilled') _try(() => _updatePressure(c, pressH.value));
   if (aqi.status === 'fulfilled')         _try(() => _updateAQI(aqi.value));
@@ -235,15 +248,22 @@ function _updateHeroBar(c, daily) {
   }
 }
 
+function _statLine(label, val) {
+  const d = _el('div', `${label} `);
+  d.append(_el('b', val ?? '—'), ' mph');
+  return d;
+}
+
 function _updateWind(c) {
   _drawCompass('wind-svg', c.wind_direction_deg ?? 0);
   const mph = c.wind_avg_mph;
   document.getElementById('wind-speed').textContent    = mph != null ? mph.toFixed(1) : '—';
   document.getElementById('wind-dir-unit').textContent =
     `mph · ${c.wind_direction_cardinal ?? ''}`;
-  document.getElementById('wind-meta').innerHTML =
-    `<div>Lull <b>${c.wind_lull_mph ?? '—'}</b> mph</div>` +
-    `<div>Gust <b>${c.wind_gust_mph ?? '—'}</b> mph</div>`;
+  document.getElementById('wind-meta').replaceChildren(
+    _statLine('Lull', c.wind_lull_mph),
+    _statLine('Gust', c.wind_gust_mph),
+  );
 }
 
 function _updateUV(c) {
@@ -254,16 +274,17 @@ function _updateUV(c) {
 }
 
 function _updateAQI(aqiData) {
-  const aqi   = aqiData?.aqi ?? 0;
+  const aqi   = aqiData?.aqi ?? null;
   const cat   = aqiData?.category ?? '—';
   const color = AQI_COLORS[cat] ?? '#e8f0fe';
-  _arcGauge('aqi-svg', aqi, 300, String(aqi), cat, color);
+  _arcGauge('aqi-svg', aqi ?? 0, 300, aqi != null ? String(aqi) : '—', cat, color);
 }
 
 function _updatePressure(c, histData) {
   const val = c.pressure_inhg;
-  document.getElementById('pressure-val').innerHTML =
-    val != null ? `${val.toFixed(2)}<span> inHg</span>` : '—';
+  const pv = document.getElementById('pressure-val');
+  if (val != null) pv.replaceChildren(`${val.toFixed(2)}`, _el('span', ' inHg'));
+  else pv.textContent = '—';
 
   const trend = c.pressure_trend ?? 'steady';
   const trendMap = {
@@ -275,19 +296,23 @@ function _updatePressure(c, histData) {
 
   const vals = (histData.pressure_inhg ?? []).filter(v => v != null);
   let lineColor = '#00e5b0';
-  let deltaStr  = '';
+  const desc = _el('span', `· ${t.desc}`);
+  desc.style.color = '#5a7fa8';
+  const parts = [`${t.sym} ${t.label} `, desc];
   if (vals.length >= 2) {
     const delta = vals[vals.length - 1] - vals[0];
     const abs   = Math.abs(delta);
     if      (abs > 0.30) lineColor = '#ff4e4e';
     else if (abs > 0.12) lineColor = '#ffb347';
     const sign = delta >= 0 ? '+' : '';
-    deltaStr = ` <span class="pressure-delta" style="color:${lineColor}">${sign}${delta.toFixed(2)}" / 6h</span>`;
+    const d = _el('span', `${sign}${delta.toFixed(2)}" / 6h`, 'pressure-delta');
+    d.style.color = lineColor;
+    parts.push(' ', d);
   }
 
   const trendEl = document.getElementById('pressure-trend');
   trendEl.className = t.cls;
-  trendEl.innerHTML = `${t.sym} ${t.label} <span style="color:#5a7fa8">· ${t.desc}</span>${deltaStr}`;
+  trendEl.replaceChildren(...parts);
 
   if (sp.pressure) {
     sp.pressure.data.datasets[0].borderColor     = lineColor;
@@ -297,46 +322,63 @@ function _updatePressure(c, histData) {
 }
 
 function _updateRain(rainData, c) {
-  const rate = c?.rain_rate_in_hr;
-  const intensityEl = document.getElementById('rain-intensity-block');
-  if (rate != null && rate > 0) {
-    const { cat, color, pct } = _rainCategory(rate);
-    intensityEl.innerHTML =
-      `<div class="rain-status-row">` +
-      `<div class="rain-cat-lbl" style="color:${color}">${cat}</div>` +
-      `<div class="rain-bar-track"><div class="rain-bar-fill" style="width:${pct}%;background:${color}"></div></div>` +
-      `<div class="rain-rate-lbl">${rate.toFixed(2)} in/hr</div>` +
-      `</div>`;
-  } else {
-    intensityEl.innerHTML = `<div class="rain-norain">No Rain</div>`;
+  if (c) {
+    const rate = c.rain_rate_in_hr;
+    const intensityEl = document.getElementById('rain-intensity-block');
+    if (rate != null && rate > 0) {
+      const { cat, color, pct } = _rainCategory(rate);
+      const fill = _el('div', null, 'rain-bar-fill');
+      fill.style.width = `${pct}%`;
+      fill.style.background = color;
+      const track = _el('div', null, 'rain-bar-track');
+      track.append(fill);
+      const status = _el('div', null, 'rain-status-row');
+      const catEl = _el('div', cat, 'rain-cat-lbl');
+      catEl.style.color = color;
+      status.append(catEl, track, _el('div', `${rate.toFixed(2)} in/hr`, 'rain-rate-lbl'));
+      intensityEl.replaceChildren(status);
+    } else {
+      intensityEl.replaceChildren(_el('div', 'No Rain', 'rain-norain'));
+    }
+
+    const lcLast   = c.lightning_last_epoch;
+    const lcDetail = lcLast
+      ? `${c.lightning_last_distance_km ?? '?'} km · ${_fmtAgo(lcLast)}`
+      : 'No recent strikes';
+    document.getElementById('lightning-row').replaceChildren(
+      _el('div', '⚡', 'lc-icon'),
+      _el('div', String(c.lightning_count_1h ?? 0), 'lc-rate'),
+      _el('div', '/hr', 'lc-unit'),
+      _el('div', `· ${lcDetail}`, 'lc-detail'),
+    );
   }
 
-  const today     = c?.rain_today_in          ?? 0;
-  const yesterday = rainData.rain_yesterday_in ?? 0;
-  const sevenDay  = rainData.rain_7day_in      ?? 0;
-  const year      = rainData.rain_year_in      ?? 0;
-  document.getElementById('rain-totals').innerHTML =
-    `<div class="rain-total"><div class="rain-val">${today.toFixed(2)}"</div><div class="rain-lbl">Today</div></div>` +
-    `<div class="rain-total"><div class="rain-val">${yesterday.toFixed(2)}"</div><div class="rain-lbl">Yesterday</div></div>` +
-    `<div class="rain-total"><div class="rain-val">${sevenDay.toFixed(2)}"</div><div class="rain-lbl">7-Day</div></div>` +
-    `<div class="rain-total"><div class="rain-val">${year.toFixed(2)}"</div><div class="rain-lbl">Year</div></div>`;
-
-  const lcRate   = c?.lightning_count_1h ?? 0;
-  const lcLast   = c?.lightning_last_epoch;
-  const lcDist   = c?.lightning_last_distance_km;
-  const lcDetail = lcLast ? `${lcDist ?? '?'} km · ${_fmtAgo(lcLast)}` : 'No recent strikes';
-  document.getElementById('lightning-row').innerHTML =
-    `<div class="lc-icon">⚡</div>` +
-    `<div class="lc-rate">${lcRate}</div>` +
-    `<div class="lc-unit">/hr</div>` +
-    `<div class="lc-detail">· ${lcDetail}</div>`;
+  if (rainData) {
+    const fmt = v => (v != null ? `${v.toFixed(2)}"` : '—');
+    const totals = [
+      [fmt(c?.rain_today_in),           'Today'],
+      [fmt(rainData.rain_yesterday_in), 'Yesterday'],
+      [fmt(rainData.rain_7day_in),      '7-Day'],
+      [fmt(rainData.rain_year_in),      'Year'],
+    ];
+    document.getElementById('rain-totals').replaceChildren(
+      ...totals.map(([val, lbl]) => {
+        const d = _el('div', null, 'rain-total');
+        d.append(_el('div', val, 'rain-val'), _el('div', lbl, 'rain-lbl'));
+        return d;
+      }),
+    );
+  }
 }
 
 function _updateMoon(moon) {
   document.getElementById('moon-emoji').textContent = moon.emoji     ?? '🌙';
   document.getElementById('moon-phase').textContent = moon.phase_name ?? '—';
-  document.getElementById('moon-times').innerHTML   =
-    `${moon.moonrise ?? '—'} ↑ rise<br>${moon.moonset ?? '—'} ↓ set`;
+  document.getElementById('moon-times').replaceChildren(
+    `${moon.moonrise ?? '—'} ↑ rise`,
+    document.createElement('br'),
+    `${moon.moonset ?? '—'} ↓ set`,
+  );
 }
 
 function _updateSunrise(moon) {
@@ -346,9 +388,24 @@ function _updateSunrise(moon) {
     moon.day_length ? `${moon.day_length} of daylight` : '—';
 }
 
-function _updateStatusBar(c) {
+const STALE_S = 180;    // station or API data older than this is flagged
+const OFFLINE_S = 900;
+
+function _fmtStamp(epoch) {
+  return new Date(epoch * 1000).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
+  });
+}
+
+export function renderStatus() {
   const dot = document.getElementById('status-dot');
-  const age = c.epoch ? Math.floor(Date.now() / 1000) - c.epoch : null;
-  dot.className = 'dot' + (age == null || age > 180 ? ' stale' : '');
-  document.getElementById('status-time').textContent = _fmt12(c.epoch);
+  const el  = document.getElementById('status-time');
+  const nowS = Date.now() / 1000;
+  const obsAge = lastObsEpoch ? nowS - lastObsEpoch : Infinity;
+  const apiAge = lastOkAt ? nowS - lastOkAt / 1000 : Infinity;
+  const age = Math.max(obsAge, apiAge);
+
+  dot.className = 'dot' + (age > OFFLINE_S ? ' offline' : age > STALE_S ? ' stale' : '');
+  if (!lastObsEpoch) el.textContent = 'No data';
+  else el.textContent = age > STALE_S ? _fmtStamp(lastObsEpoch) : _fmt12(lastObsEpoch);
 }

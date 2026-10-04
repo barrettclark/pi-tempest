@@ -5,6 +5,7 @@ All responses return epoch timestamps as labels (JS converts to local time).
 Down-sampling uses GROUP BY bucket to cap point counts.
 """
 
+import logging
 import time
 
 import aiosqlite
@@ -15,6 +16,7 @@ from api import units
 from api.deps import get_db
 
 router = APIRouter()
+log = logging.getLogger("tempest.history")
 
 _stats_cache: dict = {"data": None, "fetched_at": 0.0}
 _STATS_TTL = 1800  # 30 minutes
@@ -146,7 +148,8 @@ async def get_rain_history(db: aiosqlite.Connection = Depends(get_db)):
             / 25.4,
             2,
         )
-    except Exception:
+    except Exception as exc:
+        log.warning("WeatherFlow stats unavailable (%s); using local data", type(exc).__name__)
         # Fall back to SQLite on API failure
         yesterday_start = int(
             (now_local - _dt.timedelta(days=1))

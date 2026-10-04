@@ -13,6 +13,7 @@ All other packet types are silently ignored.
 import asyncio
 import json
 import logging
+import math
 import sys
 import time
 
@@ -21,6 +22,12 @@ from collector import db
 from collector.backfill import run as run_backfill
 
 log = logging.getLogger("tempest.udp")
+
+SENSOR_TYPES = ("obs_st", "rapid_wind", "evt_strike", "evt_precip")
+_MIN_EPOCH = 946_684_800  # 2000-01-01; rejects zeroed or garbage timestamps
+_FUTURE_SLACK_S = 300  # tolerate modest clock skew between hub and Pi
+
+_tasks: set[asyncio.Task] = set()
 
 
 def _parse_obs_st(obs_array: list) -> dict:
@@ -51,6 +58,31 @@ def _parse_obs_st(obs_array: list) -> dict:
     }
 
 
+def _is_number(v: object) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def _is_num_or_none(v: object) -> bool:
+    return v is None or _is_number(v)
+
+
+def _is_epoch(v: object) -> bool:
+    return (
+        isinstance(v, int)
+        and not isinstance(v, bool)
+        and _MIN_EPOCH <= v <= time.time() + _FUTURE_SLACK_S
+    )
+
+
+def _is_our_sensor(packet: dict) -> bool:
+    serial = packet.get("serial_number")
+    if not isinstance(serial, str):
+        return False
+    if config.TEMPEST_SERIAL:
+        return serial == config.TEMPEST_SERIAL
+    return serial.startswith("ST-")
+
+
 class TempestProtocol(asyncio.DatagramProtocol):
     def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
@@ -66,16 +98,24 @@ class TempestProtocol(asyncio.DatagramProtocol):
             log.debug("Malformed packet from %s: %s", addr, exc)
             return
 
+        if not isinstance(packet, dict):
+            log.debug("Non-object packet from %s", addr)
+            return
+
         ptype = packet.get("type")
 
+        if ptype in SENSOR_TYPES and not _is_our_sensor(packet):
+            log.debug("Ignoring %s from unexpected device: %s", ptype, packet.get("serial_number"))
+            return
+
         if ptype == "obs_st":
-            self._loop.create_task(self._handle_obs_st(packet))
+            self._spawn(self._handle_obs_st(packet))
         elif ptype == "rapid_wind":
-            self._loop.create_task(self._handle_rapid_wind(packet))
+            self._spawn(self._handle_rapid_wind(packet))
         elif ptype == "evt_strike":
-            self._loop.create_task(self._handle_evt_strike(packet))
+            self._spawn(self._handle_evt_strike(packet))
         elif ptype == "evt_precip":
-            self._loop.create_task(self._handle_evt_precip(packet))
+            self._spawn(self._handle_evt_precip(packet))
         elif ptype in ("device_status", "hub_status"):
             pass  # informational only
         else:
@@ -87,21 +127,22 @@ class TempestProtocol(asyncio.DatagramProtocol):
     def connection_lost(self, exc: Exception | None) -> None:
         log.warning("UDP connection lost: %s", exc)
 
-    async def _handle_obs_st(self, packet: dict) -> None:
-        # UDP obs_st uses serial_number (string), not device_id (int).
-        # Only accept packets from our Tempest sensor.
-        serial = packet.get("serial_number", "")
-        if serial and not serial.startswith("ST-"):
-            log.debug("Ignoring obs_st from non-Tempest device: %s", serial)
-            return
+    def _spawn(self, coro) -> None:
+        task = self._loop.create_task(coro)
+        _tasks.add(task)
+        task.add_done_callback(_tasks.discard)
 
-        obs_list = packet.get("obs", [])
-        if not obs_list:
+    async def _handle_obs_st(self, packet: dict) -> None:
+        obs_list = packet.get("obs")
+        if not isinstance(obs_list, list) or not obs_list:
             return
 
         obs_array = obs_list[0]
-        if len(obs_array) < 16:
-            log.warning("obs_st array too short (%d fields)", len(obs_array))
+        if not isinstance(obs_array, list) or len(obs_array) < 17:
+            log.warning("obs_st array too short or malformed")
+            return
+        if not _is_epoch(obs_array[0]) or not all(_is_num_or_none(v) for v in obs_array[1:18]):
+            log.warning("obs_st rejected: invalid epoch or non-numeric field")
             return
 
         try:
@@ -114,8 +155,11 @@ class TempestProtocol(asyncio.DatagramProtocol):
             log.error("Failed to store obs_st: %s", exc)
 
     async def _handle_rapid_wind(self, packet: dict) -> None:
-        ob = packet.get("ob", [])
-        if len(ob) < 3:
+        ob = packet.get("ob")
+        if not isinstance(ob, list) or len(ob) < 3:
+            return
+        if not _is_epoch(ob[0]) or not (_is_num_or_none(ob[1]) and _is_num_or_none(ob[2])):
+            log.warning("rapid_wind rejected: invalid epoch or non-numeric field")
             return
         try:
             await db.insert_rapid_wind(
@@ -127,8 +171,11 @@ class TempestProtocol(asyncio.DatagramProtocol):
             log.error("Failed to store rapid_wind: %s", exc)
 
     async def _handle_evt_strike(self, packet: dict) -> None:
-        evt = packet.get("evt", [])
-        if len(evt) < 3:
+        evt = packet.get("evt")
+        if not isinstance(evt, list) or len(evt) < 3:
+            return
+        if not _is_epoch(evt[0]) or not (_is_num_or_none(evt[1]) and _is_num_or_none(evt[2])):
+            log.warning("evt_strike rejected: invalid epoch or non-numeric field")
             return
         try:
             await db.insert_lightning(
@@ -141,7 +188,12 @@ class TempestProtocol(asyncio.DatagramProtocol):
             log.error("Failed to store lightning: %s", exc)
 
     async def _handle_evt_precip(self, packet: dict) -> None:
-        evt = packet.get("evt", [])
+        evt = packet.get("evt")
+        if not isinstance(evt, list):
+            evt = []
+        if evt and not _is_epoch(evt[0]):
+            log.warning("evt_precip rejected: invalid epoch")
+            return
         epoch = evt[0] if evt else int(time.time())
         try:
             await db.insert_rain_event(epoch=epoch)
@@ -150,24 +202,28 @@ class TempestProtocol(asyncio.DatagramProtocol):
             log.error("Failed to store rain event: %s", exc)
 
 
+async def _backfill_if_needed() -> None:
+    try:
+        if await db.backfill_needed():
+            log.info("No backfill record found — starting historic data backfill...")
+            await run_backfill()
+        else:
+            log.info("Backfill already complete.")
+    except Exception as exc:
+        log.error("Backfill failed (continuing anyway): %s", exc)
+
+
 async def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
         stream=sys.stdout,
     )
+    # httpx logs full request URLs at INFO, which would print the API token.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     log.info("Initializing database schema...")
     await db.init_schema()
-
-    if await db.backfill_needed():
-        log.info("No backfill record found — starting historic data backfill...")
-        try:
-            await run_backfill()
-        except Exception as exc:
-            log.error("Backfill failed (continuing anyway): %s", exc)
-    else:
-        log.info("Backfill already complete.")
 
     loop = asyncio.get_running_loop()
 
@@ -180,6 +236,12 @@ async def main() -> None:
     )
 
     log.info("Listening for Tempest Hub broadcasts.")
+
+    # Backfill runs beside the live listener so a slow REST pull never delays UDP.
+    backfill = asyncio.create_task(_backfill_if_needed())
+    _tasks.add(backfill)
+    backfill.add_done_callback(_tasks.discard)
+
     # Run forever; systemd Restart=always handles crashes.
     await asyncio.Event().wait()
 

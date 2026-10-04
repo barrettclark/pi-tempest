@@ -56,11 +56,12 @@ async def get_observations(
             return data.get("obs") or []
 
         except httpx.HTTPStatusError as exc:
-            log.error("HTTP error fetching observations: %s", exc)
+            # Logging the exception would print the request URL, including the token.
+            log.error("HTTP error fetching observations: %d", exc.response.status_code)
             return []
         except httpx.RequestError as exc:
             wait = 5 * (2**attempt)
-            log.warning("Request error (%s). Retrying in %ds...", exc, wait)
+            log.warning("Request error (%s). Retrying in %ds...", type(exc).__name__, wait)
             await asyncio.sleep(wait)
 
     log.error("Giving up on observations fetch after 5 attempts.")
@@ -79,5 +80,5 @@ async def get_station_info(station_id: int) -> dict:
         stations = data.get("stations", [])
         return stations[0] if stations else {}
     except Exception as exc:
-        log.error("Failed to fetch station info: %s", exc)
+        log.error("Failed to fetch station info: %s", type(exc).__name__)
         return {}

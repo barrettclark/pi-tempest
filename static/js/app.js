@@ -1,8 +1,12 @@
-import { initNow, refreshNow } from './now.js';
+import { fetchJson } from './api.js';
+import { initNow, refreshNow, renderStatus } from './now.js';
 
 const LOADING      = document.getElementById('loading');
 const STATUSBAR_T  = document.getElementById('statusbar-time');
 const STATUS_OBS   = document.getElementById('status-obs');
+const POLL_MS      = 60_000;
+
+let inFlight = false;
 
 function tickClock() {
   STATUSBAR_T.textContent = new Date().toLocaleTimeString('en-US', {
@@ -12,13 +16,20 @@ function tickClock() {
 
 async function refreshStatus() {
   try {
-    const s = await fetch('/api/status').then(r => r.json());
+    const s = await fetchJson('/api/status');
     STATUS_OBS.textContent = `${s.db_row_count} obs`;
   } catch (_) {}
 }
 
 async function refresh() {
-  await Promise.allSettled([refreshNow(), refreshStatus()]);
+  if (inFlight) return;
+  inFlight = true;
+  try {
+    await Promise.allSettled([refreshNow(), refreshStatus()]);
+    renderStatus();
+  } finally {
+    inFlight = false;
+  }
 }
 
 document.getElementById('exit-btn')?.addEventListener('click', () => {
@@ -28,6 +39,11 @@ document.getElementById('exit-btn')?.addEventListener('click', () => {
 (async () => {
   tickClock();
   setInterval(tickClock, 1000);
+  // Registered before the first await so a slow or failed initial load still polls.
+  setInterval(refresh, POLL_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refresh();
+  });
   try {
     initNow();
     await refresh();
@@ -38,5 +54,4 @@ document.getElementById('exit-btn')?.addEventListener('click', () => {
   } finally {
     LOADING.classList.add('hidden');
   }
-  setInterval(refresh, 60_000);
 })();
