@@ -158,7 +158,7 @@ class TempestProtocol(asyncio.DatagramProtocol):
         ob = packet.get("ob")
         if not isinstance(ob, list) or len(ob) < 3:
             return
-        if not _is_epoch(ob[0]) or not (_is_num_or_none(ob[1]) and _is_num_or_none(ob[2])):
+        if not _is_epoch(ob[0]) or not (_is_number(ob[1]) and _is_number(ob[2])):
             log.warning("rapid_wind rejected: invalid epoch or non-numeric field")
             return
         try:
@@ -174,7 +174,7 @@ class TempestProtocol(asyncio.DatagramProtocol):
         evt = packet.get("evt")
         if not isinstance(evt, list) or len(evt) < 3:
             return
-        if not _is_epoch(evt[0]) or not (_is_num_or_none(evt[1]) and _is_num_or_none(evt[2])):
+        if not _is_epoch(evt[0]) or not (_is_number(evt[1]) and _is_number(evt[2])):
             log.warning("evt_strike rejected: invalid epoch or non-numeric field")
             return
         try:
@@ -189,12 +189,10 @@ class TempestProtocol(asyncio.DatagramProtocol):
 
     async def _handle_evt_precip(self, packet: dict) -> None:
         evt = packet.get("evt")
-        if not isinstance(evt, list):
-            evt = []
-        if evt and not _is_epoch(evt[0]):
-            log.warning("evt_precip rejected: invalid epoch")
+        if not isinstance(evt, list) or not evt or not _is_epoch(evt[0]):
+            log.warning("evt_precip rejected: missing or invalid epoch")
             return
-        epoch = evt[0] if evt else int(time.time())
+        epoch = evt[0]
         try:
             await db.insert_rain_event(epoch=epoch)
             log.debug("Rain event at epoch=%s", epoch)

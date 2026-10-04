@@ -77,3 +77,44 @@ async def test_serial_override_is_exact_match(inserted, monkeypatch):
     assert inserted == []
     await _deliver(_obs_packet(serial="ST-00000512"))
     assert len(inserted) == 1
+
+
+@pytest.fixture
+def events(monkeypatch):
+    calls: dict[str, list] = {"wind": [], "lightning": [], "rain": []}
+
+    async def wind(epoch, speed, direction):
+        calls["wind"].append((epoch, speed, direction))
+
+    async def lightning(epoch, distance, energy):
+        calls["lightning"].append((epoch, distance, energy))
+
+    async def rain(epoch):
+        calls["rain"].append(epoch)
+
+    monkeypatch.setattr(db, "insert_rapid_wind", wind)
+    monkeypatch.setattr(db, "insert_lightning", lightning)
+    monkeypatch.setattr(db, "insert_rain_event", rain)
+    return calls
+
+
+@pytest.mark.parametrize(
+    "packet",
+    [
+        pytest.param({"type": "rapid_wind", "ob": [_NOW, None, 180]}, id="wind-null-speed"),
+        pytest.param({"type": "rapid_wind", "ob": [_NOW, 1.0, None]}, id="wind-null-direction"),
+        pytest.param({"type": "evt_strike", "evt": [_NOW, None, 0]}, id="strike-null-distance"),
+        pytest.param({"type": "evt_strike", "evt": [_NOW, 5, None]}, id="strike-null-energy"),
+        pytest.param({"type": "evt_precip"}, id="precip-missing-evt"),
+        pytest.param({"type": "evt_precip", "evt": []}, id="precip-empty-evt"),
+        pytest.param({"type": "evt_precip", "evt": "now"}, id="precip-string-evt"),
+    ],
+)
+async def test_event_packets_reject_missing_or_null_fields(events, packet):
+    await _deliver({**packet, "serial_number": "ST-00000512"})
+    assert events == {"wind": [], "lightning": [], "rain": []}
+
+
+async def test_precip_accepts_valid_event(events):
+    await _deliver({"type": "evt_precip", "serial_number": "ST-00000512", "evt": [_NOW]})
+    assert events["rain"] == [_NOW]
