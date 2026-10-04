@@ -58,7 +58,7 @@ async def test_forecast_keeps_last_good_data_on_failure(mock_upstream, fresh_cac
     assert config.TOKEN not in caplog.text
 
 
-_AQI_OK = [{"ParameterName": "PM2.5", "AQI": 42, "Category": {"Name": "Good"}}]
+_AQI_OK = [{"parameterName": "PM2.5", "nowcastAQI": 42, "aqiCategoryName": "Good"}]
 
 
 async def test_aqi_failure_is_not_cached(mock_upstream, fresh_caches):
