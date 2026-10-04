@@ -113,8 +113,8 @@ def compute_moon() -> dict:
 
 
 @router.get("/moon", response_model=MoonResponse)
-async def get_moon():
-    today = time.strftime("%Y-%m-%d", time.localtime())
+def get_moon():
+    today = _dt.datetime.now(ZoneInfo(config.TIMEZONE)).strftime("%Y-%m-%d")
     if _cache["data"] is None or _cache["cache_date"] != today:
         log.info("Computing moon data...")
         _cache["data"] = compute_moon()

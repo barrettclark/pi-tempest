@@ -1,7 +1,8 @@
 """GET /api/current — latest observation + derived fields."""
 
 import time
-from datetime import datetime, timedelta, timezone, tzinfo
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import aiosqlite
 from fastapi import APIRouter, Depends
@@ -13,14 +14,7 @@ from api.schemas import CurrentResponse, RapidWind
 
 router = APIRouter()
 
-# America/Chicago offset (handles CDT/CST automatically via stdlib)
-_TZ: tzinfo
-try:
-    from zoneinfo import ZoneInfo
-
-    _TZ = ZoneInfo(config.TIMEZONE)
-except Exception:
-    _TZ = timezone(timedelta(hours=-5))  # fallback to CST
+_TZ = ZoneInfo(config.TIMEZONE)  # a bad TZ should fail at import, not drift silently
 
 
 def _local_iso(epoch: int) -> str:

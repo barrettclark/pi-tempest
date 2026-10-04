@@ -62,7 +62,7 @@ def _convert_daily(d: dict) -> dict:
     }
 
 
-async def _fetch_forecast() -> dict:
+async def _fetch_forecast() -> dict | None:
     url = f"{config.WEATHERFLOW_API_BASE}/better_forecast"
     params: dict[str, str | int] = {"station_id": config.STATION_ID, "token": config.TOKEN}
     try:
@@ -76,9 +76,12 @@ async def _fetch_forecast() -> dict:
             "hourly": [_convert_hourly(h) for h in hourly],
             "daily": [_convert_daily(d) for d in daily[:7]],
         }
+    except httpx.HTTPStatusError as exc:
+        # Exception text includes the request URL, which carries the token.
+        log.error("Forecast fetch failed: HTTP %d", exc.response.status_code)
     except Exception as exc:
-        log.error("Failed to fetch forecast: %s", exc)
-        return {"hourly": [], "daily": []}
+        log.error("Forecast fetch failed: %s", type(exc).__name__)
+    return None
 
 
 @router.get("/forecast")
@@ -86,8 +89,10 @@ async def get_forecast():
     now = time.time()
     if _cache["data"] is None or (now - _cache["fetched_at"]) > _CACHE_TTL:
         log.info("Refreshing forecast cache...")
-        _cache["data"] = await _fetch_forecast()
-        _cache["fetched_at"] = now
+        fetched = await _fetch_forecast()
+        if fetched is not None:
+            _cache["data"] = fetched
+            _cache["fetched_at"] = now
 
     forecast_data = _cache["data"] or {"hourly": [], "daily": []}
 

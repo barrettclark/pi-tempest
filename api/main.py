@@ -22,7 +22,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -50,15 +50,25 @@ app.include_router(moon.router, prefix="/api")
 app.include_router(status.router, prefix="/api")
 
 
+_LOOPBACK = {"127.0.0.1", "::1"}
+_background: set[asyncio.Task] = set()
+
+
 @app.post("/api/exit")
-async def exit_kiosk():
-    """Kill the Chromium kiosk browser so the desktop becomes accessible."""
-    asyncio.get_running_loop().call_later(0.5, lambda: asyncio.create_task(_kill_browser()))
+async def exit_kiosk(request: Request):
+    """Kill the Chromium kiosk browser so the desktop becomes accessible. Loopback only."""
+    if request.client is None or request.client.host not in _LOOPBACK:
+        raise HTTPException(status_code=403)
+    task = asyncio.create_task(_kill_browser())
+    _background.add(task)
+    task.add_done_callback(_background.discard)
     return JSONResponse({"ok": True})
 
 
 async def _kill_browser():
-    await asyncio.create_subprocess_exec("pkill", "-f", "/usr/lib/chromium/chromium")
+    await asyncio.sleep(0.5)  # let the HTTP response flush before the browser dies
+    proc = await asyncio.create_subprocess_exec("pkill", "-f", "/usr/lib/chromium/chromium")
+    await proc.wait()
 
 
 _static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")

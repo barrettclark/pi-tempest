@@ -1,5 +1,6 @@
 import pytest
 
+import config
 from api import units
 from api.routers.current import _compute_rain_rate_in_hr
 
@@ -22,3 +23,16 @@ def test_rain_rate_two_minute_interval():
     # 1mm in a 2-minute interval → 30mm/hr
     result = _compute_rain_rate_in_hr(rain_mm=1.0, report_interval_min=2)
     assert result == pytest.approx(units.mm_to_in(30.0), rel=0.01)
+
+
+def test_invalid_timezone_fails_loudly(monkeypatch):
+    import importlib
+    from zoneinfo import ZoneInfoNotFoundError
+
+    import api.routers.current as current
+
+    monkeypatch.setattr(config, "TIMEZONE", "Not/AZone")
+    with pytest.raises(ZoneInfoNotFoundError):
+        importlib.reload(current)
+    monkeypatch.undo()
+    importlib.reload(current)
