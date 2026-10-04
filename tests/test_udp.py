@@ -105,6 +105,8 @@ def events(monkeypatch):
         pytest.param({"type": "rapid_wind", "ob": [_NOW, 1.0, None]}, id="wind-null-direction"),
         pytest.param({"type": "evt_strike", "evt": [_NOW, None, 0]}, id="strike-null-distance"),
         pytest.param({"type": "evt_strike", "evt": [_NOW, 5, None]}, id="strike-null-energy"),
+        pytest.param({"type": "rapid_wind", "ob": [_NOW, 10**400, 180]}, id="wind-huge-int"),
+        pytest.param({"type": "evt_strike", "evt": [_NOW, 5, 2**63]}, id="strike-int64-overflow"),
         pytest.param({"type": "evt_precip"}, id="precip-missing-evt"),
         pytest.param({"type": "evt_precip", "evt": []}, id="precip-empty-evt"),
         pytest.param({"type": "evt_precip", "evt": "now"}, id="precip-string-evt"),

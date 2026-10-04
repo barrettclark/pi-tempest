@@ -25,6 +25,7 @@ log = logging.getLogger("tempest.udp")
 
 SENSOR_TYPES = ("obs_st", "rapid_wind", "evt_strike", "evt_precip")
 _MIN_EPOCH = 946_684_800  # 2000-01-01; rejects zeroed or garbage timestamps
+_SQLITE_INT_MIN, _SQLITE_INT_MAX = -(2**63), 2**63 - 1
 _FUTURE_SLACK_S = 300  # tolerate modest clock skew between hub and Pi
 
 _tasks: set[asyncio.Task] = set()
@@ -59,7 +60,11 @@ def _parse_obs_st(obs_array: list) -> dict:
 
 
 def _is_number(v: object) -> bool:
-    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+    if isinstance(v, bool):
+        return False
+    if isinstance(v, int):
+        return _SQLITE_INT_MIN <= v <= _SQLITE_INT_MAX  # math.isfinite would overflow on huge ints
+    return isinstance(v, float) and math.isfinite(v)
 
 
 def _is_num_or_none(v: object) -> bool:
