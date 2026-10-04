@@ -19,21 +19,21 @@ _CACHE_TTL = 1800  # 30 minutes
 def _parse_airnow_response(data: list) -> dict:
     if not data:
         return {"aqi": None, "category": None, "pm25_aqi": None, "ozone_aqi": None}
-    overall = max(data, key=lambda x: x.get("AQI", 0))
-    pm25_aqi = next((x["AQI"] for x in data if "PM2.5" in x.get("ParameterName", "")), None)
+    overall = max(data, key=lambda x: (x.get("nowcastAQI") is not None, x.get("nowcastAQI") or 0))
+    pm25_aqi = next((x["nowcastAQI"] for x in data if "PM2.5" in x.get("parameterName", "")), None)
     ozone_aqi = next(
-        (x["AQI"] for x in data if "OZONE" in x.get("ParameterName", "").upper()), None
+        (x["nowcastAQI"] for x in data if "OZONE" in x.get("parameterName", "").upper()), None
     )
     return {
-        "aqi": overall.get("AQI"),
-        "category": overall.get("Category", {}).get("Name"),
+        "aqi": overall.get("nowcastAQI"),
+        "category": overall.get("aqiCategoryName"),
         "pm25_aqi": pm25_aqi,
         "ozone_aqi": ozone_aqi,
     }
 
 
 async def _fetch_aqi() -> dict:
-    url = "https://www.airnowapi.org/aq/observation/zipCode/current/"
+    url = "https://www.airnowapi.org/aq/observation/current/ziplatlong/"
     params = {
         "format": "application/json",
         "zipCode": "75019",

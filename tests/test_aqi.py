@@ -3,8 +3,8 @@ from api.routers.aqi import _parse_airnow_response
 
 def test_parse_picks_highest_aqi():
     data = [
-        {"ParameterName": "PM2.5", "AQI": 42, "Category": {"Name": "Good"}},
-        {"ParameterName": "OZONE", "AQI": 35, "Category": {"Name": "Good"}},
+        {"parameterName": "PM2.5", "nowcastAQI": 42, "aqiCategoryName": "Good"},
+        {"parameterName": "OZONE", "nowcastAQI": 35, "aqiCategoryName": "Good"},
     ]
     result = _parse_airnow_response(data)
     assert result["aqi"] == 42
@@ -20,7 +20,27 @@ def test_parse_empty_returns_nones():
 
 
 def test_parse_missing_pollutant_is_none():
-    data = [{"ParameterName": "PM2.5", "AQI": 10, "Category": {"Name": "Good"}}]
+    data = [{"parameterName": "PM2.5", "nowcastAQI": 10, "aqiCategoryName": "Good"}]
     result = _parse_airnow_response(data)
     assert result["ozone_aqi"] is None
     assert result["pm25_aqi"] == 10
+
+
+def test_parse_null_aqi_does_not_crash():
+    data = [
+        {"parameterName": "PM2.5", "nowcastAQI": None, "aqiCategoryName": None},
+        {"parameterName": "OZONE", "nowcastAQI": 20, "aqiCategoryName": "Good"},
+    ]
+    result = _parse_airnow_response(data)
+    assert result["aqi"] == 20
+    assert result["pm25_aqi"] is None
+
+
+def test_parse_valid_zero_beats_null():
+    data = [
+        {"parameterName": "PM2.5", "nowcastAQI": None, "aqiCategoryName": None},
+        {"parameterName": "OZONE", "nowcastAQI": 0, "aqiCategoryName": "Good"},
+    ]
+    result = _parse_airnow_response(data)
+    assert result["aqi"] == 0
+    assert result["category"] == "Good"

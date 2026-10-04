@@ -58,7 +58,7 @@ async def test_forecast_keeps_last_good_data_on_failure(mock_upstream, fresh_cac
     assert config.TOKEN not in caplog.text
 
 
-_AQI_OK = [{"ParameterName": "PM2.5", "AQI": 42, "Category": {"Name": "Good"}}]
+_AQI_OK = [{"parameterName": "PM2.5", "nowcastAQI": 42, "aqiCategoryName": "Good"}]
 
 
 async def test_aqi_failure_is_not_cached(mock_upstream, fresh_caches):
@@ -84,3 +84,16 @@ async def test_aqi_keeps_last_good_data_and_redacts_key(
     assert stale.aqi == 42
     assert stale.fetched_at == expired_at
     assert "secret-airnow-key" not in caplog.text
+
+
+async def test_aqi_requests_ziplatlong_endpoint(mock_upstream, fresh_caches):
+    seen: list[httpx.Request] = []
+
+    def handler(req):
+        seen.append(req)
+        return httpx.Response(200, json=_AQI_OK)
+
+    mock_upstream(handler)
+    await aqi.get_aqi()
+    assert seen[0].url.path == "/aq/observation/current/ziplatlong/"
+    assert seen[0].url.params["zipCode"] == "75019"
