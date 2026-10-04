@@ -106,9 +106,7 @@ WeatherFlow Hub
 │  ├─ app.js            boot, clock tick, refresh loop     │
 │  ├─ now.js            grid rendering, arc/compass SVGs,  │
 │  │                    temp gradient, rain categorization │
-│  ├─ forecast.js       forecast data handling             │
-│  ├─ upcoming.js       upcoming conditions strip          │
-│  ├─ gauges.js         gauge helper utilities             │
+│  ├─ api.js            fetch helper (timeout, status)     │
 │  ├─ icons.js          condition → emoji icon mapping     │
 │  ├─ sparklines.js     Chart.js line sparkline (pressure) │
 │  └─ vendor/           local Chart.js build (no CDN)      │
@@ -170,9 +168,7 @@ pi-tempest/
 │   └── js/
 │       ├── app.js                 # boot, clock, refresh loop
 │       ├── now.js                 # grid rendering, SVG gauges/compass, sparkline wiring
-│       ├── forecast.js            # forecast data handling
-│       ├── upcoming.js            # upcoming conditions strip
-│       ├── gauges.js              # gauge helpers
+│       ├── api.js                 # fetch helper (timeout, status check)
 │       ├── icons.js               # condition → emoji mapping
 │       ├── sparklines.js          # Chart.js sparkline helper
 │       └── vendor/                # local Chart.js build (no CDN dependency)
