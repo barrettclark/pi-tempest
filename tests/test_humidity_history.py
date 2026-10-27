@@ -40,6 +40,11 @@ async def seeded_db(tmp_path, monkeypatch):
     await db.init_schema()
 
     now = int(time.time())
+    # Freeze the clock for the rest of the test: get_humidity_history() computes
+    # its own "since" from time.time(), and without this, seeding and the
+    # assertion below could land in different 15-min buckets if the test runs
+    # across a boundary.
+    monkeypatch.setattr(time, "time", lambda: float(now))
     bucket = (now // 900) * 900
     await db.insert_observation_batch(
         [
@@ -50,14 +55,15 @@ async def seeded_db(tmp_path, monkeypatch):
             _obs(bucket - 7200, None),  # null RH: excluded by the WHERE clause
         ]
     )
-    return path
+    return path, now
 
 
 async def test_humidity_history_buckets_and_windows(seeded_db):
-    async with aiosqlite.connect(seeded_db) as conn:
+    path, now = seeded_db
+    async with aiosqlite.connect(path) as conn:
         body = await history.get_humidity_history(hours=24, db=conn)
     pairs = dict(zip(body["labels"], body["humidity_pct"], strict=True))
-    bucket = (int(time.time()) // 900) * 900
+    bucket = (now // 900) * 900
     assert pairs[bucket] == 50.0  # (40 + 60) / 2, same bucket averaged
     assert pairs[bucket - 3600] == 90.0
     assert len(body["labels"]) == 2  # the 25h-old row and the null-RH row are excluded
