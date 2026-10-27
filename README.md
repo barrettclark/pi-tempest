@@ -85,7 +85,6 @@ WeatherFlow Hub
 │  GET /api/history/rain           today/yesterday/       │
 │                                   7-day/month/year      │
 │  GET /api/history/pressure?hours=12                     │
-│  GET /api/history/humidity?hours=24                     │
 │  GET /api/history/solar                                 │
 │  GET /api/history/lightning?hours=24                    │
 │  GET /api/forecast               WeatherFlow hourly,    │
@@ -129,7 +128,6 @@ WeatherFlow Hub
 | Feels Like | NWS heat index (≥80°F) or wind chill (≤50°F, wind ≥3mph) |
 | Dew Point | Magnus formula from temperature + relative humidity |
 | Pressure trend | Slope of last 3h of pressure readings (rising/falling/steady) |
-| Humidity trend | 24h average, 15-min buckets — same query shape as pressure |
 | Rain today/yesterday/7-day/month/year | Sums of `rain_accumulated`, WeatherFlow stats API with SQLite fallback |
 | Wind cardinal | 16-point compass from degrees |
 | Sunrise/sunset/day length | `ephem` solar ephemeris for station lat/lon |

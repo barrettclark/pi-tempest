@@ -227,32 +227,6 @@ async def get_pressure_history(
     }
 
 
-@router.get("/humidity")
-async def get_humidity_history(
-    hours: int = Query(default=24, ge=1, le=168),
-    db: aiosqlite.Connection = Depends(get_db),
-):
-    since = int(time.time()) - hours * 3600
-    bucket_size = 900  # 15-minute buckets
-    cursor = await db.execute(
-        """
-        SELECT
-            (epoch / :b) * :b AS bucket,
-            AVG(relative_humidity) AS avg_rh
-        FROM observations
-        WHERE epoch >= :since AND relative_humidity IS NOT NULL
-        GROUP BY bucket
-        ORDER BY bucket ASC
-        """,
-        {"b": bucket_size, "since": since},
-    )
-    rows = await cursor.fetchall()
-    return {
-        "labels": [r[0] for r in rows],
-        "humidity_pct": [_round_none(r[1]) for r in rows],
-    }
-
-
 @router.get("/wind")
 async def get_wind_history(
     hours: int = Query(default=24, ge=1, le=168),

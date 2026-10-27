@@ -180,11 +180,10 @@ export function initNow() {
 
 // ── Refresh ───────────────────────────────────────────────
 export async function refreshNow() {
-  const [cur, rainH, pressH, humH, forecast, aqi, moonR] = await Promise.allSettled([
+  const [cur, rainH, pressH, forecast, aqi, moonR] = await Promise.allSettled([
     fetchJson('/api/current'),
     fetchJson('/api/history/rain'),
     fetchJson('/api/history/pressure?hours=6'),
-    fetchJson('/api/history/humidity?hours=24'),
     fetchJson('/api/forecast'),
     fetchJson('/api/aqi'),
     fetchJson('/api/moon'),
@@ -201,7 +200,6 @@ export async function refreshNow() {
     _try(() => _updateWind(c));
     _try(() => _updateUV(c));
   }
-  if (humH.status === 'fulfilled')        _try(() => _updateHumidityTrend(humH.value));
   if (c && fc.daily?.length)              _try(() => _updateHeroBar(c, fc.daily));
   if (rainH.status === 'fulfilled')       _try(() => _updateRain(rainH.value, c));
   if (c && pressH.status === 'fulfilled') _try(() => _updatePressure(c, pressH.value));
@@ -229,47 +227,6 @@ function _updateHero(c, fc) {
     document.getElementById('hum-comfort').style.cssText = 'left:30%;width:40%';
     document.getElementById('hum-dot').style.left = `${Math.min(100, Math.max(0, hum))}%`;
   }
-}
-
-// 24h strip below the comfort bar. Hand-built SVG (not Chart.js) to match
-// the other inline gauges (_arcGauge, _drawCompass) — no canvas, no resize
-// handling needed for a fixed-size 384x28 box. Scaled to the window's own
-// min/max (with padding), not 0-100, so day-to-day variation stays legible.
-function _updateHumidityTrend(histData) {
-  const svg = document.getElementById('hum-strip');
-  if (!svg) return;
-  const labels = histData.labels ?? [];
-  const vals = histData.humidity_pct ?? [];
-  const pairs = labels.map((x, i) => ({ x, y: vals[i] })).filter(p => p.y != null);
-  if (pairs.length < 2) {
-    svg.replaceChildren();
-    return;
-  }
-  const ys = pairs.map(p => p.y);
-  const lo = Math.min(...ys), hi = Math.max(...ys);
-  const pad = Math.max((hi - lo) * 0.15, 2);
-  const yMin = Math.max(0, lo - pad), yMax = Math.min(100, hi + pad);
-  const xMin = pairs[0].x, xMax = pairs[pairs.length - 1].x;
-  const W = 384, H = 28;
-  const sx = v => (xMax === xMin ? 0 : ((v - xMin) / (xMax - xMin)) * W);
-  const sy = v => H - ((v - yMin) / (yMax - yMin || 1)) * H;
-  const pts = pairs.map(p => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
-  const last = pairs[pairs.length - 1];
-
-  const ns = 'http://www.w3.org/2000/svg';
-  const line = document.createElementNS(ns, 'polyline');
-  line.setAttribute('points', pts);
-  line.setAttribute('fill', 'none');
-  line.setAttribute('stroke', 'var(--accent2)');
-  line.setAttribute('stroke-width', '2');
-  line.setAttribute('stroke-linecap', 'round');
-  line.setAttribute('stroke-linejoin', 'round');
-  const dot = document.createElementNS(ns, 'circle');
-  dot.setAttribute('cx', sx(last.x).toFixed(1));
-  dot.setAttribute('cy', sy(last.y).toFixed(1));
-  dot.setAttribute('r', '2.2');
-  dot.setAttribute('fill', 'var(--accent2)');
-  svg.replaceChildren(line, dot);
 }
 
 function _updateHeroBar(c, daily) {
