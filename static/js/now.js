@@ -294,16 +294,24 @@ function _updatePressure(c, histData) {
   };
   const t = trendMap[trend] ?? trendMap.steady;
 
-  const vals = (histData.pressure_inhg ?? []).filter(v => v != null);
+  // Paired with labels (not just filtered) so the elapsed time matches the
+  // first/last *non-null* readings, not the full fetch window.
+  const pairs = (histData.labels ?? [])
+    .map((x, i) => ({ x, y: histData.pressure_inhg?.[i] }))
+    .filter(p => p.y != null);
   let lineColor = '#00e5b0';
   const desc = _el('span', `· ${t.desc}`);
   desc.style.color = '#5a7fa8';
   const parts = [`${t.sym} ${t.label} `, desc];
-  if (vals.length >= 2) {
-    const delta = vals[vals.length - 1] - vals[0];
-    const abs   = Math.abs(delta);
-    if      (abs > 0.30) lineColor = '#ff4e4e';
-    else if (abs > 0.12) lineColor = '#ffb347';
+  if (pairs.length >= 2) {
+    const delta = pairs[pairs.length - 1].y - pairs[0].y;
+    const hours = Math.max((pairs[pairs.length - 1].x - pairs[0].x) / 3600, 0.1);
+    const ratePerHr = Math.abs(delta / hours);
+    // Thresholds in rate, not raw magnitude, so the color agrees with the
+    // server's trend label (api/routers/current.py: +-0.02"/hr = rising/falling)
+    // regardless of how much of the fetch window has data.
+    if      (ratePerHr > 0.05) lineColor = '#ff4e4e';
+    else if (ratePerHr > 0.02) lineColor = '#ffb347';
     const sign = delta >= 0 ? '+' : '';
     const d = _el('span', `${sign}${delta.toFixed(2)}" / 6h`, 'pressure-delta');
     d.style.color = lineColor;
