@@ -1,6 +1,6 @@
 # Pi Tempest Weather Dashboard
 
-A single-page touchscreen weather dashboard for the [WeatherFlow Tempest](https://shop.tempest.earth/) station, running on a Raspberry Pi. A 3×3 grid keeps every metric — conditions, UV, air quality, wind, pressure, sunrise/sunset, rain, lightning, and moon phase — on screen at once, no tabs, no scrolling.
+A single-page touchscreen weather dashboard for the [WeatherFlow Tempest](https://shop.tempest.earth/) station, running on a Raspberry Pi. A 3×3 grid keeps every metric — conditions, UV, air quality, wind, pressure, sunrise/sunset, rain, lightning, and moon phase — on screen at once, no tabs, no scrolling. A status-bar icon swaps the whole screen to a full-screen RainViewer radar loop centered on the station, and back again.
 
 ![Current dashboard](img/dashboard-current.png)
 *Current dashboard — 3×3 grid layout*
@@ -32,6 +32,10 @@ The dashboard fills the full 1024×600 display as a 3×3 grid (300px / 424px / 3
 ```
 
 The center "hero" cell spans the top two rows and shows current temperature with a color-graded high/low range bar and a humidity comfort band. UV and AQI use SVG semicircle arc gauges; wind uses an SVG compass with a live direction arrow. Pressure has a 12h sparkline drawn on a local (no-CDN) Chart.js.
+
+### Radar screen
+
+A sonar icon in the status bar swaps the full 1024×600 screen to a non-interactive radar view (a grid icon in the same spot swaps back): the last ~2 hours of RainViewer precipitation frames looping over a dark-inverted OpenStreetMap basemap, centered on the station, with 30-minute/1-hour/2-hour range chips and a play/pause control. Rendered with a locally vendored (no-CDN) Leaflet; fixed at zoom 7, since RainViewer's radar tiles don't support zoom 8 and above.
 
 ---
 
@@ -93,6 +97,8 @@ WeatherFlow Hub
 │  GET /api/moon                   phase, rise/set,       │
 │                                   sunrise/sunset (ephem)│
 │  GET /api/status                 health check           │
+│  GET /api/radar/frames           RainViewer frames,     │
+│                                   2-min cached           │
 │  POST /api/exit                  quits kiosk Chromium   │
 │  GET /                           serves static/         │
 └──────────────────────┬──────────────────────────────────┘
@@ -103,14 +109,17 @@ WeatherFlow Hub
 │                                                          │
 │  static/index.html   3×3 grid dashboard shell            │
 │  static/js/           vanilla JS ES modules              │
-│  ├─ app.js            boot, clock tick, refresh loop     │
+│  ├─ app.js            boot, clock tick, refresh loop,    │
+│  │                    grid ⇄ radar screen toggle         │
 │  ├─ now.js            grid rendering, arc/compass SVGs,  │
 │  │                    temp gradient, rain categorization │
+│  ├─ radar.js          Leaflet map, RainViewer playback   │
 │  ├─ api.js            fetch helper (timeout, status)     │
 │  ├─ icons.js          condition → emoji icon mapping     │
 │  ├─ sparklines.js     Chart.js line sparkline (pressure) │
-│  └─ vendor/           local Chart.js build (no CDN)      │
-│  static/css/          dark theme, 1024×600 grid layout   │
+│  └─ vendor/           local Chart.js + Leaflet (no CDN)  │
+│  static/css/          dark theme, 1024×600 grid layout,  │
+│                        radar screen, vendored Leaflet CSS│
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -160,7 +169,8 @@ pi-tempest/
 │       ├── forecast.py            # GET /api/forecast (cached proxy)
 │       ├── aqi.py                 # GET /api/aqi (AirNow, cached)
 │       ├── moon.py                # GET /api/moon (ephem: phase, sun/moon rise/set)
-│       └── status.py              # GET /api/status
+│       ├── status.py              # GET /api/status
+│       └── radar.py               # GET /api/radar/frames (RainViewer, cached)
 │
 ├── static/
 │   ├── index.html                 # 3×3 grid dashboard shell
@@ -168,10 +178,11 @@ pi-tempest/
 │   └── js/
 │       ├── app.js                 # boot, clock, refresh loop
 │       ├── now.js                 # grid rendering, SVG gauges/compass, sparkline wiring
+│       ├── radar.js               # Leaflet map init, RainViewer playback/chips/polling
 │       ├── api.js                 # fetch helper (timeout, status check)
 │       ├── icons.js               # condition → emoji mapping
 │       ├── sparklines.js          # Chart.js sparkline helper
-│       └── vendor/                # local Chart.js build (no CDN dependency)
+│       └── vendor/                # local Chart.js + Leaflet builds (no CDN dependency)
 │
 ├── systemd/
 │   ├── tempest-collector.service

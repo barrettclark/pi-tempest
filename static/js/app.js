@@ -1,5 +1,6 @@
 import { fetchJson } from './api.js';
 import { initNow, refreshNow, renderStatus } from './now.js';
+import { onRadarShown, onRadarHidden } from './radar.js';
 
 const LOADING      = document.getElementById('loading');
 const STATUSBAR_T  = document.getElementById('statusbar-time');
@@ -35,6 +36,30 @@ async function refresh() {
 document.getElementById('exit-btn')?.addEventListener('click', () => {
   fetch('/api/exit', { method: 'POST' }).catch(() => {});
 });
+
+const GRID         = document.querySelector('.grid');
+const RADAR_SCREEN = document.getElementById('radar-screen');
+const RADAR_BTN    = document.getElementById('radar-btn');
+const BACK_BTN     = document.getElementById('back-btn');
+
+function showRadar() {
+  GRID.classList.add('hidden');
+  RADAR_SCREEN.classList.remove('hidden');
+  RADAR_BTN.classList.add('hidden');
+  BACK_BTN.classList.remove('hidden');
+  onRadarShown();
+}
+
+function showGrid() {
+  RADAR_SCREEN.classList.add('hidden');
+  GRID.classList.remove('hidden');
+  BACK_BTN.classList.add('hidden');
+  RADAR_BTN.classList.remove('hidden');
+  onRadarHidden();
+}
+
+RADAR_BTN.addEventListener('click', showRadar);
+BACK_BTN.addEventListener('click', showGrid);
 
 (async () => {
   tickClock();

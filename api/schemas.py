@@ -61,6 +61,16 @@ class AqiResponse(BaseModel):
     fetched_at: int
 
 
+class RadarFrame(BaseModel):
+    time: int
+    path: str
+
+
+class RadarFramesResponse(BaseModel):
+    host: str
+    frames: list[RadarFrame]
+
+
 class MoonResponse(BaseModel):
     phase_name: str
     emoji: str

@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 import config
-from api.routers import aqi, forecast
+from api.routers import aqi, forecast, radar
 
 _REAL_ASYNC_CLIENT = httpx.AsyncClient
 
@@ -24,6 +24,7 @@ def mock_upstream(monkeypatch):
 def fresh_caches(monkeypatch):
     monkeypatch.setattr(forecast, "_cache", {"data": None, "fetched_at": 0})
     monkeypatch.setattr(aqi, "_cache", {"data": None, "fetched_at": 0})
+    monkeypatch.setattr(radar, "_cache", {"data": None, "fetched_at": 0})
 
 
 _FORECAST_OK = {
@@ -97,3 +98,126 @@ async def test_aqi_requests_ziplatlong_endpoint(mock_upstream, fresh_caches):
     await aqi.get_aqi()
     assert seen[0].url.path == "/aq/observation/current/ziplatlong/"
     assert seen[0].url.params["zipCode"] == "75019"
+
+
+_RADAR_OK = {
+    "host": "https://tilecache.rainviewer.com",
+    "radar": {
+        "past": [
+            {"time": 1000, "path": "/v2/radar/1000"},
+            {"time": 1600, "path": "/v2/radar/1600"},
+        ],
+        "nowcast": [{"time": 2200, "path": "/v2/radar/2200"}],
+    },
+}
+
+
+async def test_radar_strips_nowcast_frames(mock_upstream, fresh_caches):
+    mock_upstream(lambda req: httpx.Response(200, json=_RADAR_OK))
+    body = await radar.get_radar_frames()
+    assert body.host == "https://tilecache.rainviewer.com"
+    assert [f.time for f in body.frames] == [1000, 1600]
+
+
+async def test_radar_failure_is_not_cached(mock_upstream, fresh_caches):
+    mock_upstream(lambda req: httpx.Response(500))
+    body = await radar.get_radar_frames()
+    assert body.frames == []
+    assert body.host == ""
+    assert radar._cache["data"] is None
+
+
+async def test_radar_keeps_last_good_data_on_failure(mock_upstream, fresh_caches):
+    mock_upstream(lambda req: httpx.Response(200, json=_RADAR_OK))
+    good = await radar.get_radar_frames()
+
+    radar._cache["fetched_at"] -= radar._CACHE_TTL + 1
+    mock_upstream(lambda req: httpx.Response(500))
+    stale = await radar.get_radar_frames()
+    assert stale.frames == good.frames
+
+
+async def test_radar_cache_hit_skips_fetch(mock_upstream, fresh_caches):
+    seen: list[httpx.Request] = []
+
+    def handler(req):
+        seen.append(req)
+        return httpx.Response(200, json=_RADAR_OK)
+
+    mock_upstream(handler)
+    await radar.get_radar_frames()
+    await radar.get_radar_frames()
+    assert len(seen) == 1
+
+
+async def test_radar_missing_radar_key_returns_empty_frames(mock_upstream, fresh_caches):
+    mock_upstream(lambda req: httpx.Response(200, json={"host": "https://x"}))
+    body = await radar.get_radar_frames()
+    assert body.frames == []
+    assert body.host == "https://x"
+
+
+async def test_radar_drops_malformed_frame_entries(mock_upstream, fresh_caches):
+    payload = {
+        "host": "https://tilecache.rainviewer.com",
+        "radar": {
+            "past": [
+                {"time": 1000},  # missing "path"
+                {"time": 1600, "path": "/v2/radar/1600"},
+            ],
+            "nowcast": [],
+        },
+    }
+    mock_upstream(lambda req: httpx.Response(200, json=payload))
+    body = await radar.get_radar_frames()
+    assert [f.time for f in body.frames] == [1600]
+
+
+async def test_radar_frames_with_no_host_falls_back_instead_of_caching(mock_upstream, fresh_caches):
+    payload = {
+        "host": "",
+        "radar": {
+            "past": [
+                {"time": 1000, "path": "/v2/radar/1000"},
+                {"time": 1600, "path": "/v2/radar/1600"},
+            ],
+            "nowcast": [],
+        },
+    }
+    mock_upstream(lambda req: httpx.Response(200, json=payload))
+    body = await radar.get_radar_frames()
+    assert body.frames == []
+    assert body.host == ""
+    assert radar._cache["data"] is None
+
+
+async def test_radar_upstream_timeout_is_under_browser_deadline(fresh_caches, monkeypatch):
+    # frontend's fetchJson() aborts after FETCH_TIMEOUT_MS = 8000; leave it headroom.
+    captured = {}
+
+    def spy(**kw):
+        captured.update(kw)
+        transport = httpx.MockTransport(lambda req: httpx.Response(200, json=_RADAR_OK))
+        return _REAL_ASYNC_CLIENT(transport=transport, **kw)
+
+    monkeypatch.setattr(httpx, "AsyncClient", spy)
+    await radar.get_radar_frames()
+    assert captured["timeout"] < 8.0
+
+
+async def test_radar_wrong_typed_value_falls_back_instead_of_500(mock_upstream, fresh_caches):
+    payload = {
+        "host": "https://tilecache.rainviewer.com",
+        "radar": {
+            "past": [
+                {"time": 1000, "path": "/v2/radar/1000"},
+                {"time": "abc", "path": "/p"},  # wrong type, keys present
+            ],
+            "nowcast": [],
+        },
+    }
+    mock_upstream(lambda req: httpx.Response(200, json=payload))
+    body = await radar.get_radar_frames()
+    assert body.frames == []
+    assert body.host == ""
+    assert radar._cache["data"] is None
