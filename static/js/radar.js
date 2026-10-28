@@ -10,9 +10,20 @@ const NOW_RECENCY_SECONDS = 900; // only label the newest frame "now" if it's th
 
 let map = null;
 let radarLayers = []; // two-layer pool: one visible, one preloading the next frame
+let radarLayerReady = [false, false]; // has this pool slot's CURRENT url actually finished loading?
 let activeRadarIndex = 0;
 let radarSwapTimeoutId = null;
 let radarSwapHandler = null;
+
+const baseFailedTiles = new Set();
+const radarFailedTiles = [new Set(), new Set()]; // one Set per pool slot — a hidden layer's own tiles shouldn't affect the visible layer's warning
+
+function updateTileWarn() {
+  const tileWarn = document.getElementById('radar-tile-warn');
+  if (!tileWarn) return;
+  const activeFailures = radarFailedTiles[activeRadarIndex];
+  tileWarn.classList.toggle('hidden', !(baseFailedTiles.size > 0 || activeFailures.size > 0));
+}
 
 let state = { host: '', frames: [], activeFrames: [], frameIndex: 0, playing: true };
 let activeRange = '2h';
@@ -63,11 +74,14 @@ function swapRadarLayer(url) {
     nextLayer.bringToFront();
     activeLayer.setOpacity(0);
     activeRadarIndex = nextIndex;
+    updateTileWarn(); // the warning only reflects the now-visible layer's failures
   };
 
-  // Leaflet's setUrl() is a no-op (no 'load' fires) when the layer already has this URL —
-  // e.g. a short loop wrapping back to a frame the inactive layer still has loaded.
-  if (nextLayer._url === url) {
+  // Only take the immediate-swap shortcut when this exact url already finished loading on
+  // this slot (radarLayerReady), not merely when the url string matches — Leaflet's setUrl()
+  // is a no-op for an unchanged url, so a url that's still loading, or that failed last time,
+  // would never fire another 'load' event for us to wait on.
+  if (nextLayer._url === url && radarLayerReady[nextIndex]) {
     applySwap();
     return Promise.resolve();
   }
@@ -78,13 +92,21 @@ function swapRadarLayer(url) {
       radarSwapHandler = null;
       clearTimeout(radarSwapTimeoutId);
       radarSwapTimeoutId = null;
+      radarLayerReady[nextIndex] = true;
       applySwap();
       resolve();
     };
 
+    radarLayerReady[nextIndex] = false;
     nextLayer.on('load', radarSwapHandler);
     radarSwapTimeoutId = setTimeout(radarSwapHandler, SWAP_TIMEOUT_MS);
-    nextLayer.setUrl(url);
+    if (nextLayer._url === url) {
+      // Same url as before, but not confirmed loaded (still in flight, or failed last time) —
+      // force a fresh attempt so 'load' actually fires again for us to catch.
+      nextLayer.redraw();
+    } else {
+      nextLayer.setUrl(url);
+    }
   });
 }
 
@@ -93,8 +115,11 @@ function clearRadarLayer() {
   radarLayers.forEach((layer, i) => {
     layer.setUrl(BLANK_TILE_URL);
     layer.setOpacity(i === 0 ? RADAR_OPACITY : 0);
+    radarLayerReady[i] = false;
+    radarFailedTiles[i].clear();
   });
   activeRadarIndex = 0;
+  updateTileWarn();
 }
 
 function renderFrame(frame) {
@@ -235,16 +260,12 @@ export function onRadarShown() {
     activeRadarIndex = 0;
     L.circleMarker(CENTER, { radius: 5, color: '#00c8ff', fillColor: '#00c8ff', fillOpacity: 1, interactive: false }).addTo(map);
 
-    const tileWarn = document.getElementById('radar-tile-warn');
-    const baseFailedTiles = new Set();
-    const radarFailedTiles = new Set(); // shared by both pooled radar layers — same logical overlay
-    const updateWarn = () => tileWarn.classList.toggle('hidden', !(baseFailedTiles.size > 0 || radarFailedTiles.size > 0));
     // catches real network/DNS tile failures; RainViewer's "unsupported zoom" response is a 200 OK and won't trigger this
-    baseLayer.on('tileerror', (e) => { baseFailedTiles.add(tileKey(e.coords)); updateWarn(); });
-    baseLayer.on('tileload', (e) => { baseFailedTiles.delete(tileKey(e.coords)); updateWarn(); });
-    radarLayers.forEach((layer) => {
-      layer.on('tileerror', (e) => { radarFailedTiles.add(tileKey(e.coords)); updateWarn(); });
-      layer.on('tileload', (e) => { radarFailedTiles.delete(tileKey(e.coords)); updateWarn(); });
+    baseLayer.on('tileerror', (e) => { baseFailedTiles.add(tileKey(e.coords)); updateTileWarn(); });
+    baseLayer.on('tileload', (e) => { baseFailedTiles.delete(tileKey(e.coords)); updateTileWarn(); });
+    radarLayers.forEach((layer, i) => {
+      layer.on('tileerror', (e) => { radarFailedTiles[i].add(tileKey(e.coords)); updateTileWarn(); });
+      layer.on('tileload', (e) => { radarFailedTiles[i].delete(tileKey(e.coords)); updateTileWarn(); });
     });
 
     playBtn.addEventListener('click', togglePlay);
