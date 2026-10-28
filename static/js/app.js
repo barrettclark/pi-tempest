@@ -36,6 +36,28 @@ document.getElementById('exit-btn')?.addEventListener('click', () => {
   fetch('/api/exit', { method: 'POST' }).catch(() => {});
 });
 
+const GRID         = document.querySelector('.grid');
+const RADAR_SCREEN = document.getElementById('radar-screen');
+const RADAR_BTN    = document.getElementById('radar-btn');
+const BACK_BTN     = document.getElementById('back-btn');
+
+function showRadar() {
+  GRID.classList.add('hidden');
+  RADAR_SCREEN.classList.remove('hidden');
+  RADAR_BTN.classList.add('hidden');
+  BACK_BTN.classList.remove('hidden');
+}
+
+function showGrid() {
+  RADAR_SCREEN.classList.add('hidden');
+  GRID.classList.remove('hidden');
+  BACK_BTN.classList.add('hidden');
+  RADAR_BTN.classList.remove('hidden');
+}
+
+RADAR_BTN.addEventListener('click', showRadar);
+BACK_BTN.addEventListener('click', showGrid);
+
 (async () => {
   tickClock();
   setInterval(tickClock, 1000);
