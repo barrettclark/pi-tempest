@@ -31,7 +31,7 @@ The dashboard fills the full 1024×600 display as a 3×3 grid (300px / 424px / 3
 └─────────────────────────────────────────────────────────┘
 ```
 
-The center "hero" cell spans the top two rows and shows current temperature with a color-graded high/low range bar and a humidity comfort band. UV and AQI use SVG semicircle arc gauges; wind uses an SVG compass with a live direction arrow. Pressure has a 12h sparkline drawn on a local (no-CDN) Chart.js.
+The center "hero" cell spans the top two rows and shows current temperature with a color-graded high/low range bar and a humidity comfort band with a 24h trend line below it. UV and AQI use SVG semicircle arc gauges; wind uses an SVG compass with a live direction arrow. Pressure has a 12h sparkline drawn on a local (no-CDN) Chart.js.
 
 ---
 
