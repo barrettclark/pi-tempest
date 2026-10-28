@@ -1,5 +1,6 @@
 """GET /api/radar/frames — proxies RainViewer past radar frames, trimmed and cached."""
 
+import asyncio
 import logging
 import time
 
@@ -13,12 +14,16 @@ router = APIRouter()
 
 _cache: dict = {"data": None, "fetched_at": 0}
 _CACHE_TTL = 120  # 2 minutes
+_UPSTREAM_TIMEOUT = 6.0  # total deadline, kept under the frontend's 8s fetch-abort window
 
 
 async def _fetch_radar_frames() -> dict:
     url = "https://api.rainviewer.com/public/weather-maps.json"
-    async with httpx.AsyncClient(timeout=6.0) as client:
-        resp = await client.get(url)
+    # httpx's `timeout=` kwarg caps each phase (connect/write/read/pool) independently, not
+    # the request as a whole — a slow connect followed by a slow read could still exceed the
+    # frontend's deadline. wait_for() enforces a genuine total deadline instead.
+    async with httpx.AsyncClient(timeout=_UPSTREAM_TIMEOUT) as client:
+        resp = await asyncio.wait_for(client.get(url), timeout=_UPSTREAM_TIMEOUT)
     resp.raise_for_status()
     data = resp.json()
     past = data.get("radar", {}).get("past", [])
