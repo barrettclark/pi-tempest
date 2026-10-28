@@ -147,18 +147,18 @@
       </svg>
       Radar
     </div>
-    <div class="radar-legend"></div>
+    <div class="radar-legend" aria-label="Precipitation intensity, light to heavy"></div>
     <div class="radar-chips">
-      <button class="radar-chip" data-range="30m">30M</button>
-      <button class="radar-chip" data-range="1h">1H</button>
-      <button class="radar-chip radar-chip-active" data-range="2h">2H</button>
+      <button class="radar-chip" data-range="30m" aria-pressed="false">30M</button>
+      <button class="radar-chip" data-range="1h" aria-pressed="false">1H</button>
+      <button class="radar-chip radar-chip-active" data-range="2h" aria-pressed="true">2H</button>
     </div>
   </div>
   <div id="radar-map">
     <div id="radar-tile-warn" class="radar-tile-warn hidden">Tiles unavailable</div>
   </div>
   <div class="radar-playback">
-    <button id="radar-play-btn" aria-label="Pause loop">
+    <button id="radar-play-btn" aria-label="Pause loop" title="Pause loop">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <rect x="5" y="4" width="5" height="16" rx="1"/>
         <rect x="14" y="4" width="5" height="16" rx="1"/>
