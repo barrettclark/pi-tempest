@@ -251,6 +251,8 @@ html, body {
   background: var(--bg-dark);
 }
 
+.map-tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
+
 .radar-tile-warn {
   position: absolute;
   top: 50%;

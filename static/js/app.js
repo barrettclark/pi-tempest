@@ -1,5 +1,6 @@
 import { fetchJson } from './api.js';
 import { initNow, refreshNow, renderStatus } from './now.js';
+import { onRadarShown, onRadarHidden } from './radar.js';
 
 const LOADING      = document.getElementById('loading');
 const STATUSBAR_T  = document.getElementById('statusbar-time');
@@ -46,6 +47,7 @@ function showRadar() {
   RADAR_SCREEN.classList.remove('hidden');
   RADAR_BTN.classList.add('hidden');
   BACK_BTN.classList.remove('hidden');
+  onRadarShown();
 }
 
 function showGrid() {
@@ -53,6 +55,7 @@ function showGrid() {
   GRID.classList.remove('hidden');
   BACK_BTN.classList.add('hidden');
   RADAR_BTN.classList.remove('hidden');
+  onRadarHidden();
 }
 
 RADAR_BTN.addEventListener('click', showRadar);
