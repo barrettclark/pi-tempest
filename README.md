@@ -5,8 +5,7 @@ A single-page touchscreen weather dashboard for the [WeatherFlow Tempest](https:
 ![Current dashboard](img/dashboard-current.png)
 *Current dashboard — 3×3 grid layout*
 
-![Previous setup running WeatherFlow_PiConsole](img/IMG_0440.png)
-*Previous setup (WeatherFlow_PiConsole) — replaced by this app*
+Inspired by [WeatherFlow_PiConsole](https://github.com/peted-davis/WeatherFlow_PiConsole), which this app replaced.
 
 ---
 
