@@ -11,6 +11,7 @@ Routes:
   GET  /api/history/lightning
   GET  /api/forecast         — hourly 24h + daily 7d from WeatherFlow
   GET  /api/aqi              — AirNow.gov AQI for Coppell TX
+  GET  /api/radar/frames     — RainViewer past radar frames (trimmed, cached)
   GET  /api/moon             — moon phase, rise/set, upcoming phases
   GET  /api/status           — health check
   POST /api/exit             — kill the kiosk browser (Chromium)
@@ -26,7 +27,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from api.routers import aqi, current, forecast, history, moon, status
+from api.routers import aqi, current, forecast, history, moon, radar, status
 
 log = logging.getLogger("tempest.api")
 
@@ -46,6 +47,7 @@ app.include_router(current.router, prefix="/api")
 app.include_router(history.router, prefix="/api/history")
 app.include_router(forecast.router, prefix="/api")
 app.include_router(aqi.router, prefix="/api")
+app.include_router(radar.router, prefix="/api")
 app.include_router(moon.router, prefix="/api")
 app.include_router(status.router, prefix="/api")
 
