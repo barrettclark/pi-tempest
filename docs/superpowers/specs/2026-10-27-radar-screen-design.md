@@ -137,6 +137,6 @@ L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, touchZo
 
 ## What's Left to the Builder
 
-- Exact Leaflet zoom level (visually tune on the real device so the ~2-hour precipitation window around Coppell reads clearly at 1024×600 — somewhere in the zoom 7–9 range is a reasonable starting point).
+- ~~Exact Leaflet zoom level~~ — settled during implementation: zoom must be **7**, not tunable upward. RainViewer's radar tiles return a 200 OK "Zoom Level Not Supported" placeholder (not a real error Leaflet can catch) for zoom 8 and above, confirmed directly against their tile host. This isn't a visual preference, it's a hard ceiling imposed by the data source.
 - Exact tile size (256 vs 512) — 256 is the safer default for a Pi 4's GPU budget; revisit if frames look soft.
 - Whether `/api/status` grows a `lat`/`lon` field or `radar.js` just imports the same default from a small shared constant — either is fine, it's a static value either way.
