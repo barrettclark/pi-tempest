@@ -35,10 +35,10 @@ The center "hero" cell spans the top two rows and shows current temperature with
 
 ### Radar screen
 
-A sonar icon in the status bar swaps the full 1024×600 screen to a non-interactive radar view (a grid icon in the same spot swaps back): the last ~2 hours of RainViewer precipitation frames looping over a dark-inverted OpenStreetMap basemap, centered on the station, with NOW/30-minute/1-hour/2-hour range chips and a play/pause control (NOW shows a single static snapshot of the most recent frame instead of looping). Rendered with a locally vendored (no-CDN) Leaflet; fixed at zoom 7, since RainViewer's radar tiles don't support zoom 8 and above.
+A sonar icon in the status bar swaps the full 1024×600 screen to a non-interactive radar view (a grid icon in the same spot swaps back): the last ~2 hours of RainViewer precipitation frames looping over an Esri light gray canvas basemap, centered on the station, with NOW/30-minute/1-hour/2-hour range chips and a play/pause control (NOW shows a single static snapshot of the most recent frame instead of looping). Rendered with a locally vendored (no-CDN) Leaflet; fixed at zoom 7, since RainViewer's radar tiles don't support zoom 8 and above.
 
 ![Radar screen](img/radar-screen.png)
-*Radar screen — NOW snapshot, non-interactive dark basemap*
+*Radar screen — NOW snapshot, light basemap*
 
 ---
 
