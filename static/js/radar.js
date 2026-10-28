@@ -262,9 +262,8 @@ export function onRadarShown() {
       zoomControl: false, dragging: false, scrollWheelZoom: false,
       touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, tap: false,
     });
-    const baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
-      className: 'map-tiles-dark',
+    const baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 16, attribution: '&copy; Esri',
     }).addTo(map);
     radarLayers = [0, 1].map((i) =>
       L.tileLayer(BLANK_TILE_URL, { opacity: i === 0 ? RADAR_OPACITY : 0 }).addTo(map)
