@@ -32,6 +32,10 @@ const PLAY_ICON =
 const PAUSE_ICON =
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1"/><rect x="14" y="4" width="5" height="16" rx="1"/></svg>';
 
+function tileKey(coords) {
+  return `${coords.z}/${coords.x}/${coords.y}`;
+}
+
 function buildTileUrl(frame) {
   return `${state.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
 }
@@ -54,20 +58,34 @@ function swapRadarLayer(url) {
 
   cancelPendingSwap();
 
-  radarSwapHandler = () => {
-    nextLayer.off('load', radarSwapHandler);
-    radarSwapHandler = null;
-    clearTimeout(radarSwapTimeoutId);
-    radarSwapTimeoutId = null;
+  const applySwap = () => {
     nextLayer.setOpacity(RADAR_OPACITY);
     nextLayer.bringToFront();
     activeLayer.setOpacity(0);
     activeRadarIndex = nextIndex;
   };
 
-  nextLayer.on('load', radarSwapHandler);
-  radarSwapTimeoutId = setTimeout(radarSwapHandler, SWAP_TIMEOUT_MS);
-  nextLayer.setUrl(url);
+  // Leaflet's setUrl() is a no-op (no 'load' fires) when the layer already has this URL —
+  // e.g. a short loop wrapping back to a frame the inactive layer still has loaded.
+  if (nextLayer._url === url) {
+    applySwap();
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    radarSwapHandler = () => {
+      nextLayer.off('load', radarSwapHandler);
+      radarSwapHandler = null;
+      clearTimeout(radarSwapTimeoutId);
+      radarSwapTimeoutId = null;
+      applySwap();
+      resolve();
+    };
+
+    nextLayer.on('load', radarSwapHandler);
+    radarSwapTimeoutId = setTimeout(radarSwapHandler, SWAP_TIMEOUT_MS);
+    nextLayer.setUrl(url);
+  });
 }
 
 function clearRadarLayer() {
@@ -80,8 +98,8 @@ function clearRadarLayer() {
 }
 
 function renderFrame(frame) {
-  if (!frame) return;
-  swapRadarLayer(buildTileUrl(frame));
+  if (!frame) return Promise.resolve();
+  return swapRadarLayer(buildTileUrl(frame));
 }
 
 function sliceFrames(rangeKey) {
@@ -130,7 +148,7 @@ function advanceFrame({ schedule = true } = {}) {
   if (state.activeFrames.length === 0) return;
 
   const frame = state.activeFrames[state.frameIndex];
-  renderFrame(frame);
+  const swapPromise = renderFrame(frame);
 
   const last = state.activeFrames.length - 1;
   const newestFrame = state.activeFrames[last];
@@ -147,10 +165,16 @@ function advanceFrame({ schedule = true } = {}) {
 
   const isLastFrame = state.frameIndex === last;
   const delay = isLastFrame ? 800 : 500;
-  animTimerId = setTimeout(() => {
-    state.frameIndex = isLastFrame ? 0 : state.frameIndex + 1;
-    advanceFrame();
-  }, delay);
+
+  // Pace ticks off actual tile-swap completion, not a fixed clock — otherwise a slow
+  // network never gets a chance to finish a swap before the next tick preempts it.
+  swapPromise.then(() => {
+    if (!state.playing) return;
+    animTimerId = setTimeout(() => {
+      state.frameIndex = isLastFrame ? 0 : state.frameIndex + 1;
+      advanceFrame();
+    }, delay);
+  });
 }
 
 function stopAnimation() {
@@ -186,6 +210,10 @@ async function loadFrames() {
     // no prior good data to fall back to (most likely the first load) — surface the "no data" state
     if (state.frames.length === 0) {
       sliceFrames(activeRange);
+    } else if (state.playing && animTimerId === null) {
+      // prior good data is retained, but the animation loop isn't running (e.g. the screen
+      // was just reshown) — resume it instead of leaving a frozen frame behind the pause icon
+      advanceFrame();
     }
   }
 }
@@ -208,15 +236,15 @@ export function onRadarShown() {
     L.circleMarker(CENTER, { radius: 5, color: '#00c8ff', fillColor: '#00c8ff', fillOpacity: 1, interactive: false }).addTo(map);
 
     const tileWarn = document.getElementById('radar-tile-warn');
-    let baseLayerFailing = false;
-    let radarLayerFailing = false;
-    const updateWarn = () => tileWarn.classList.toggle('hidden', !(baseLayerFailing || radarLayerFailing));
+    const baseFailedTiles = new Set();
+    const radarFailedTiles = new Set(); // shared by both pooled radar layers — same logical overlay
+    const updateWarn = () => tileWarn.classList.toggle('hidden', !(baseFailedTiles.size > 0 || radarFailedTiles.size > 0));
     // catches real network/DNS tile failures; RainViewer's "unsupported zoom" response is a 200 OK and won't trigger this
-    baseLayer.on('tileerror', () => { baseLayerFailing = true; updateWarn(); });
-    baseLayer.on('tileload', () => { baseLayerFailing = false; updateWarn(); });
+    baseLayer.on('tileerror', (e) => { baseFailedTiles.add(tileKey(e.coords)); updateWarn(); });
+    baseLayer.on('tileload', (e) => { baseFailedTiles.delete(tileKey(e.coords)); updateWarn(); });
     radarLayers.forEach((layer) => {
-      layer.on('tileerror', () => { radarLayerFailing = true; updateWarn(); });
-      layer.on('tileload', () => { radarLayerFailing = false; updateWarn(); });
+      layer.on('tileerror', (e) => { radarFailedTiles.add(tileKey(e.coords)); updateWarn(); });
+      layer.on('tileload', (e) => { radarFailedTiles.delete(tileKey(e.coords)); updateWarn(); });
     });
 
     playBtn.addEventListener('click', togglePlay);
