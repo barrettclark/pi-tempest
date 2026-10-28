@@ -37,12 +37,13 @@ export function onRadarShown() {
       maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
       className: 'map-tiles-dark',
     }).addTo(map);
-    radarLayer = L.tileLayer('', { opacity: 0.75 }).addTo(map);
-    L.circleMarker(CENTER, { radius: 5, color: '#00c8ff', fillColor: '#00c8ff', fillOpacity: 1 }).addTo(map);
+    radarLayer = L.tileLayer('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', { opacity: 0.75 }).addTo(map);
+    L.circleMarker(CENTER, { radius: 5, color: '#00c8ff', fillColor: '#00c8ff', fillOpacity: 1, interactive: false }).addTo(map);
 
     const tileWarn = document.getElementById('radar-tile-warn');
     const showWarn = () => tileWarn.classList.remove('hidden');
     const hideWarn = () => tileWarn.classList.add('hidden');
+    // catches real network/DNS tile failures; RainViewer's "unsupported zoom" response is a 200 OK and won't trigger this
     [baseLayer, radarLayer].forEach((layer) => {
       layer.on('tileerror', showWarn);
       layer.on('tileload', hideWarn);
