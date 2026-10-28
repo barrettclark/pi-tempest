@@ -87,19 +87,24 @@ function swapRadarLayer(url) {
   }
 
   return new Promise((resolve) => {
-    radarSwapHandler = () => {
+    const finish = (confirmedGood) => {
       nextLayer.off('load', radarSwapHandler);
       radarSwapHandler = null;
       clearTimeout(radarSwapTimeoutId);
       radarSwapTimeoutId = null;
-      radarLayerReady[nextIndex] = true;
+      // Leaflet's 'load' fires once the tile queue drains, whether or not individual tiles
+      // errored — and a timeout means we gave up waiting at all. Only trust this slot as
+      // "ready" (eligible for the immediate-swap shortcut next time) when the load genuinely
+      // finished with zero failed tiles; otherwise leave it eligible for a redraw/retry.
+      radarLayerReady[nextIndex] = confirmedGood && radarFailedTiles[nextIndex].size === 0;
       applySwap();
       resolve();
     };
 
+    radarSwapHandler = () => finish(true);
     radarLayerReady[nextIndex] = false;
     nextLayer.on('load', radarSwapHandler);
-    radarSwapTimeoutId = setTimeout(radarSwapHandler, SWAP_TIMEOUT_MS);
+    radarSwapTimeoutId = setTimeout(() => finish(false), SWAP_TIMEOUT_MS);
     if (nextLayer._url === url) {
       // Same url as before, but not confirmed loaded (still in flight, or failed last time) —
       // force a fresh attempt so 'load' actually fires again for us to catch.
