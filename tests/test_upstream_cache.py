@@ -1,3 +1,4 @@
+import inspect
 import time
 
 import httpx
@@ -171,6 +172,30 @@ async def test_radar_drops_malformed_frame_entries(mock_upstream, fresh_caches):
     mock_upstream(lambda req: httpx.Response(200, json=payload))
     body = await radar.get_radar_frames()
     assert [f.time for f in body.frames] == [1600]
+
+
+async def test_radar_frames_with_no_host_falls_back_instead_of_caching(mock_upstream, fresh_caches):
+    payload = {
+        "host": "",
+        "radar": {
+            "past": [
+                {"time": 1000, "path": "/v2/radar/1000"},
+                {"time": 1600, "path": "/v2/radar/1600"},
+            ],
+            "nowcast": [],
+        },
+    }
+    mock_upstream(lambda req: httpx.Response(200, json=payload))
+    body = await radar.get_radar_frames()
+    assert body.frames == []
+    assert body.host == ""
+    assert radar._cache["data"] is None
+
+
+def test_radar_upstream_timeout_is_under_browser_deadline():
+    # frontend's fetchJson() aborts after FETCH_TIMEOUT_MS = 8000; leave it headroom.
+    source = inspect.getsource(radar._fetch_radar_frames)
+    assert "timeout=6.0" in source
 
 
 async def test_radar_wrong_typed_value_falls_back_instead_of_500(mock_upstream, fresh_caches):

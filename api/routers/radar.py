@@ -17,7 +17,7 @@ _CACHE_TTL = 120  # 2 minutes
 
 async def _fetch_radar_frames() -> dict:
     url = "https://api.rainviewer.com/public/weather-maps.json"
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=6.0) as client:
         resp = await client.get(url)
     resp.raise_for_status()
     data = resp.json()
@@ -37,6 +37,8 @@ async def get_radar_frames() -> RadarFramesResponse:
         try:
             fetched = await _fetch_radar_frames()
             RadarFramesResponse(**fetched)  # raises if upstream reshaped something we can't model
+            if fetched["frames"] and not fetched["host"]:
+                raise ValueError("RainViewer response has frames but no host")
             _cache["data"] = fetched
             _cache["fetched_at"] = int(now)
         except httpx.HTTPStatusError as exc:
