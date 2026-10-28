@@ -135,12 +135,66 @@
 
 </div><!-- /grid -->
 
+<!-- ── Radar screen ─────────────────────────────────────────── -->
+<div id="radar-screen" class="hidden">
+  <div class="radar-label-row">
+    <div class="cell-label">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="4" cy="20" r="1.5" fill="currentColor" stroke="none"/>
+        <path d="M4 14A6 6 0 0 1 10 20"/>
+        <path d="M4 8A12 12 0 0 1 16 20"/>
+        <path d="M4 2A18 18 0 0 1 22 20"/>
+      </svg>
+      Radar
+    </div>
+    <div class="radar-legend"></div>
+    <div class="radar-chips">
+      <button class="radar-chip" data-range="30m">30M</button>
+      <button class="radar-chip" data-range="1h">1H</button>
+      <button class="radar-chip radar-chip-active" data-range="2h">2H</button>
+    </div>
+  </div>
+  <div id="radar-map">
+    <div id="radar-tile-warn" class="radar-tile-warn hidden">Tiles unavailable</div>
+  </div>
+  <div class="radar-playback">
+    <button id="radar-play-btn" aria-label="Pause loop">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <rect x="5" y="4" width="5" height="16" rx="1"/>
+        <rect x="14" y="4" width="5" height="16" rx="1"/>
+      </svg>
+    </button>
+    <span>-2h</span>
+    <div id="radar-track" class="radar-track">
+      <div id="radar-track-fill" class="radar-track-fill"></div>
+      <div id="radar-dot" class="radar-dot"></div>
+    </div>
+    <span id="radar-frame-time">now</span>
+  </div>
+</div><!-- /radar-screen -->
+
 <!-- ── Status bar ──────────────────────────────────────────── -->
 <div id="statusbar">
   <span><span id="status-dot" class="dot"></span><span id="status-time">—</span></span>
   <span>Coppell, TX</span>
   <span id="status-obs">—</span>
   <span id="statusbar-time">—</span>
+  <button id="radar-btn" title="Show radar" aria-label="Show radar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <circle cx="4" cy="20" r="1.5" fill="currentColor" stroke="none"/>
+      <path d="M4 14A6 6 0 0 1 10 20"/>
+      <path d="M4 8A12 12 0 0 1 16 20"/>
+      <path d="M4 2A18 18 0 0 1 22 20"/>
+    </svg>
+  </button>
+  <button id="back-btn" title="Back to dashboard" aria-label="Back to dashboard" class="hidden">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="3" y="3" width="8" height="8" rx="1.5"/>
+      <rect x="13" y="3" width="8" height="8" rx="1.5"/>
+      <rect x="3" y="13" width="8" height="8" rx="1.5"/>
+      <rect x="13" y="13" width="8" height="8" rx="1.5"/>
+    </svg>
+  </button>
   <button id="exit-btn" title="Exit kiosk">&#x2715;</button>
 </div>
 
