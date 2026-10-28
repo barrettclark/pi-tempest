@@ -136,12 +136,17 @@ function sliceFrames(rangeKey) {
   activeRange = rangeKey;
   const pausedFrame = !state.playing ? state.activeFrames[state.frameIndex] : null;
 
-  const seconds = RANGE_SECONDS[rangeKey];
-  if (seconds && state.frames.length > 0) {
-    const newestTime = state.frames[state.frames.length - 1].time;
-    state.activeFrames = state.frames.filter((f) => newestTime - f.time <= seconds);
+  if (rangeKey === 'now') {
+    // a single still of the most recent frame — not a time window
+    state.activeFrames = state.frames.slice(-1);
   } else {
-    state.activeFrames = state.frames.slice();
+    const seconds = RANGE_SECONDS[rangeKey];
+    if (seconds && state.frames.length > 0) {
+      const newestTime = state.frames[state.frames.length - 1].time;
+      state.activeFrames = state.frames.filter((f) => newestTime - f.time <= seconds);
+    } else {
+      state.activeFrames = state.frames.slice();
+    }
   }
 
   stopAnimation();
@@ -191,7 +196,9 @@ function advanceFrame({ schedule = true } = {}) {
       ? 'now'
       : new Date(frame.time * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-  if (!schedule || !state.playing) return;
+  // A single-frame set (the "now" snapshot) has nothing to loop between — leave it static
+  // rather than repeatedly re-rendering the same frame every 800ms.
+  if (!schedule || !state.playing || state.activeFrames.length <= 1) return;
 
   const isLastFrame = state.frameIndex === last;
   const delay = isLastFrame ? 800 : 500;
