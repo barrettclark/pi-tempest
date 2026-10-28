@@ -9,6 +9,7 @@ let state = { host: '', frames: [], activeFrames: [], frameIndex: 0, playing: tr
 let activeRange = '2h';
 let pollTimerId = null;
 let animTimerId = null;
+let loadSeq = 0;
 
 const RANGE_FRAME_COUNTS = { '30m': 6, '1h': 12 }; // frames are ~10min apart; '2h' (or unknown) takes all
 
@@ -99,8 +100,10 @@ function togglePlay() {
 }
 
 async function loadFrames() {
+  const seq = ++loadSeq;
   try {
     const data = await fetchJson('/api/radar/frames');
+    if (seq !== loadSeq) return; // a newer loadFrames() call has since started; this response is stale
     state.host = data.host;
     state.frames = data.frames;
     sliceFrames(activeRange);
