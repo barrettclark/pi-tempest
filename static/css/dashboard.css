@@ -273,7 +273,7 @@ html, body {
   font-size: 11px;
   padding: 6px 12px;
   border-radius: 6px;
-  z-index: 10;
+  z-index: 1001; /* above every Leaflet pane (max 700) and its controls (1000) so tile failures stay visible */
 }
 
 .radar-playback {
