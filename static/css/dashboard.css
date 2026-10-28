@@ -206,6 +206,7 @@ html, body {
   padding: 12px 14px;
   background: var(--bg-cell);
 }
+#radar-screen.hidden { display: none; }
 
 .radar-label-row {
   display: flex;
@@ -302,6 +303,7 @@ html, body {
   line-height: 1;
 }
 #radar-btn:hover, #back-btn:hover { color: var(--accent); }
+#radar-btn.hidden, #back-btn.hidden { display: none; }
 
 /* ── Status bar ───────────────────────────────────────────── */
 #statusbar {
