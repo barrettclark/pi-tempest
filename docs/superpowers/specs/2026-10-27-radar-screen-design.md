@@ -68,7 +68,7 @@ Within the 578px content area (1024×600 minus the 22px status bar), `#radar-scr
 |------|--------|-------|
 | Radar frame list | `https://api.rainviewer.com/public/weather-maps.json` | Free, no API key. Returns `{"host": "...", "radar": {"past": [{"time", "path"}, ...], "nowcast": [...]}}`. Use `radar.past` only (see Non-goals). |
 | Radar tiles | `{host}{path}/256/{z}/{x}/{y}/2/1_1.png` from RainViewer's tile host | No key. `2` = the "Universal Blue" color scheme (closest match to the dashboard's `--rain: #74b0ff` accent); `1_1` = smoothing + snow coloring on. Served directly to the browser — not proxied. |
-| Base map tiles | CARTO `dark_nolabels` basemap: `https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png` | Free, no key, served directly to the browser. Requires a visible attribution line ("© OpenStreetMap contributors © CARTO") — Leaflet's built-in (non-interactive) attribution control satisfies this; style it to blend with the dark theme. |
+| Base map tiles | OpenStreetMap standard tiles: `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, inverted to a dark palette with a CSS `filter` on the tile layer (`invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9)` — a standard "dark mode map" trick, since OSM's standard style is light-themed and there's no dedicated free dark OSM tile set) | Free, no key, served directly to the browser. **Correction (second pass):** the design originally specified CARTO's tiles, which implementation found now require an API key. The first replacement, Esri's `World_Dark_Gray_Base`, looked viable via `curl` but turned out to fail the same way in a real browser — most tiles returned a "Zoom Level Not Supported" placeholder image (still HTTP 200, so not caught as an error) when fetched with real Referer/Origin headers, confirmed by force-refetching every tile as a fresh blob and seeing no change. OSM's standard raster tiles were verified working in the actual browser (not just `curl`) before settling on them — a full 3×3 tile grid around Coppell loaded as real map data with real Referer headers. Requires the standard "© OpenStreetMap contributors" attribution; Leaflet's built-in attribution control satisfies this. A single kiosk fetching a fixed, non-panning set of tiles on each radar-screen open is well within OSM's tile usage policy (which targets bulk/automated scraping, not light personal use). |
 | Map center | `config.LAT` / `config.LON` (already `32.97` / `-96.99` — Coppell, TX) | Already defined in `config.py`; no new config needed. |
 
 ---
@@ -105,7 +105,7 @@ L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, touchZo
 
 ### New file: `static/js/radar.js`
 
-- `initRadar()` — constructs the Leaflet map once (lazily, on first visit to the radar screen, not on page load — it costs nothing while you're never looking at it), adds the CARTO base layer and a RainViewer tile layer, centered on `config`'s lat/lon (passed through from a small addition to `/api/status` or hardcoded to match `config.py`'s existing default — builder's call, either is fine since the value doesn't change at runtime).
+- `initRadar()` — constructs the Leaflet map once (lazily, on first visit to the radar screen, not on page load — it costs nothing while you're never looking at it), adds the inverted-to-dark OSM base layer and a RainViewer tile layer, centered on `config`'s lat/lon (passed through from a small addition to `/api/status` or hardcoded to match `config.py`'s existing default — builder's call, either is fine since the value doesn't change at runtime).
 - `loadFrames()` — calls `/api/radar/frames`; on failure, shows an "Radar unavailable" state in the map body rather than a blank tile grid.
 - Animation: cycles through the frames selected by the active range chip at 500ms/frame while playing, with an 800ms hold on the most recent (current) frame before looping back to the start — long enough to read "now" before the loop restarts.
 - Play/pause button toggles the loop; range chips (30M/1H/2H) re-slice the frame list and restart the loop from the beginning.
@@ -131,7 +131,7 @@ L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, touchZo
 ## Constraints
 
 - 1024×600, no scroll, Chromium kiosk (`--ozone-platform=wayland`), touch-only input — same environment as the rest of the dashboard.
-- Requires network access to `api.rainviewer.com`, RainViewer's tile host, and CARTO's tile CDN. If the Pi is offline, the radar screen should degrade to the "Radar unavailable" state rather than hang — the rest of the dashboard already has this problem for AQI/forecast and handles it the same way (stale-cache-or-empty, no crash).
+- Requires network access to `api.rainviewer.com`, RainViewer's tile host, and `tile.openstreetmap.org`. If the Pi is offline, the radar screen should degrade to the "Radar unavailable" state rather than hang — the rest of the dashboard already has this problem for AQI/forecast and handles it the same way (stale-cache-or-empty, no crash).
 
 ---
 

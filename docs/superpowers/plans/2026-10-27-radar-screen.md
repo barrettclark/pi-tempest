@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a full-screen radar view, reachable from the main dashboard via a status-bar icon and reversible via a second icon, showing the last ~2 hours of RainViewer precipitation frames over a dark CARTO basemap centered on Coppell, TX.
+**Goal:** Add a full-screen radar view, reachable from the main dashboard via a status-bar icon and reversible via a second icon, showing the last ~2 hours of RainViewer precipitation frames over a dark-inverted OpenStreetMap basemap centered on Coppell, TX.
 
 **Architecture:** A new cached FastAPI proxy endpoint (`GET /api/radar/frames`) trims RainViewer's public frame-list JSON to `{host, frames}`. The frontend stays a single page with no router — a new `#radar-screen` div and `.grid` are shown/hidden by one toggle, matching the existing `#loading` show/hide convention. A vendored, fully non-interactive Leaflet map renders the basemap + a single RainViewer tile layer whose URL is swapped per frame to animate.
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Screen is fixed 1024×600, no scroll, capacitive touch only (no mouse/keyboard) — every new element needs a real tap target, not a hover state.
-- No new API keys, no new paid service (RainViewer + CARTO basemap tiles, both free/keyless).
+- No new API keys, no new paid service (RainViewer + OpenStreetMap standard basemap tiles, both free/keyless — CARTO was the original plan (found to require an API key) and Esri's free tile service was the first replacement attempt (found to fail with "not supported" placeholders for most tiles when fetched from a real browser, despite working via `curl`); see Task 4 for the full story).
 - Map is permanently non-interactive: no pan, zoom, drag, or markers users can manipulate.
 - Past radar frames only — no nowcast/forecast frames.
 - Don't block the main grid's 60s refresh loop while the radar screen is open, or vice versa — the radar screen's own polling/animation must start only while visible and stop while hidden.
@@ -276,9 +276,12 @@ git commit -m "feat: wire radar/grid screen toggle"
 - Create: `static/js/radar.js`
 - Modify: `static/index.html` (vendor `<link>`/`<script>` tags, import radar.js)
 - Modify: `static/js/app.js` (call into radar.js from `showRadar()`/`showGrid()`)
+- Modify: `static/css/dashboard.css` (`.map-tiles-dark` filter rule for the OSM base layer)
 
 **Interfaces:**
-- Produces: `static/js/radar.js` exports `onRadarShown()` and `onRadarHidden()`. `onRadarShown()`: idempotently creates the Leaflet map (module-level `let map = null` guard — calling it twice is a no-op after the first call), adds the CARTO base layer and a RainViewer tile layer (initially blank), fetches `/api/radar/frames` and renders the most recent frame. `onRadarHidden()`: present but empty in this task (Task 5 adds the cleanup body — same exported name, so `app.js` never changes again after this task).
+- Produces: `static/js/radar.js` exports `onRadarShown()` and `onRadarHidden()`. `onRadarShown()`: idempotently creates the Leaflet map (module-level `let map = null` guard — calling it twice is a no-op after the first call), adds the dark-inverted OSM base layer and a RainViewer tile layer (initially blank), fetches `/api/radar/frames` and renders the most recent frame. `onRadarHidden()`: present but empty in this task (Task 5 adds the cleanup body — same exported name, so `app.js` never changes again after this task).
+
+**Correction found during implementation (two rounds):** the plan originally specified CARTO's `basemaps.cartocdn.com` as the base layer, matching the design doc. A live browser check found CARTO now returns an "API KEY REQUIRED" placeholder image instead of map tiles for that URL — confirmed via direct curl of the tile URL, not a code bug, a changed third-party service assumption. The first replacement, Esri's `World_Dark_Gray_Base`, passed a `curl` check but failed the same way in the real browser: most tiles (though not all — the exact center tile happened to work, which made the bug non-obvious from a single glance) came back as "Zoom Level Not Supported" placeholders with real Referer/Origin headers, confirmed by force-refetching every visible tile as a fresh uncached blob and seeing no change. The lesson, concretely: **verifying a tile/map data source with `curl` alone is not sufficient — it must be verified with a real browser fetch, because some providers gate on headers curl doesn't send.** Settled on OpenStreetMap's standard tiles (`tile.openstreetmap.org`), verified working with a full 3×3 tile grid loaded via real `<img>` elements in the actual page context before committing to it. OSM's standard style is light-themed, so the tile layer gets a CSS `filter` to invert it dark (see the code below). The design doc has been updated to match.
 - Consumes: `fetchJson` from `static/js/api.js` (`fetchJson(url) -> Promise<any>`, defined in Task-1-independent existing code); the `/api/radar/frames` response shape from Task 1 (`{host, frames: [{time, path}]}`); `#radar-map` from Task 2.
 
 - [ ] **Step 1: Vendor Leaflet 1.9.4**
@@ -336,9 +339,9 @@ export function onRadarShown() {
       zoomControl: false, dragging: false, scrollWheelZoom: false,
       touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, tap: false,
     });
-    const baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd', maxZoom: 20,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    const baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
+      className: 'map-tiles-dark',
     }).addTo(map);
     radarLayer = L.tileLayer('', { opacity: 0.75 }).addTo(map);
     L.circleMarker(CENTER, { radius: 5, color: '#00c8ff', fillColor: '#00c8ff', fillOpacity: 1 }).addTo(map);
@@ -359,16 +362,23 @@ export function onRadarHidden() {
 }
 ```
 
-- [ ] **Step 4: Wire into `static/js/app.js`**
+- [ ] **Step 4: Add the dark-tile filter to `static/css/dashboard.css`**
+
+```css
+.map-tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
+```
+(Leaflet's `className` tile-layer option puts this class on each `<img>` tile it creates. The RainViewer overlay layer doesn't get this class, so the precipitation colors stay true.)
+
+- [ ] **Step 5: Wire into `static/js/app.js`**
 
 ```js
 import { onRadarShown, onRadarHidden } from './radar.js';
 ```
 Call `onRadarShown()` at the end of `showRadar()`, and `onRadarHidden()` at the end of `showGrid()`.
 
-- [ ] **Step 5: Manual verification**
+- [ ] **Step 6: Manual verification**
 
-Run `uvicorn api.main:app --reload`, open the dashboard, tap the radar icon. Confirm: the dark CARTO basemap renders centered on Coppell, TX; a cyan dot marks the center; the most recent RainViewer frame renders as an overlay (compare against `rainviewer.com`'s own site for the same timestamp to confirm it's the right data, not just "an image loaded"). Confirm the map doesn't respond to click-drag or scroll (non-interactive). Tap back to grid and back to radar several times rapidly — confirm no "Map container is already initialized" error in the console. In devtools, temporarily set the network throttling to "Offline," tap back to grid then back to radar, and confirm the "Tiles unavailable" banner appears over the map instead of silently showing blank/broken tiles; restore the network and confirm the banner clears on the next successful tile load.
+Run `uvicorn api.main:app --reload`, open the dashboard, tap the radar icon. Confirm: the OSM basemap renders centered on Coppell, TX, inverted to a dark palette (real roads/labels, not a placeholder image) — zoom out mentally and check it actually looks like a map, not an abstract color blob; a cyan dot marks the center; the most recent RainViewer frame renders as an overlay in its true (non-inverted) colors (compare against `rainviewer.com`'s own site for the same timestamp to confirm it's the right data, not just "an image loaded"). Confirm the map doesn't respond to click-drag or scroll (non-interactive). Tap back to grid and back to radar several times rapidly — confirm no "Map container is already initialized" error in the console. In devtools, temporarily set the network throttling to "Offline," tap back to grid then back to radar, and confirm the "Tiles unavailable" banner appears over the map instead of silently showing blank/broken tiles; restore the network and confirm the banner clears on the next successful tile load. Given this task's history, don't trust a `curl` check of the tile URL as sufficient — the actual rendered tiles in the browser are what matters.
 
 - [ ] **Step 6: Commit**
 
