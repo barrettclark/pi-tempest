@@ -155,3 +155,19 @@ async def test_radar_missing_radar_key_returns_empty_frames(mock_upstream, fresh
     body = await radar.get_radar_frames()
     assert body.frames == []
     assert body.host == "https://x"
+
+
+async def test_radar_drops_malformed_frame_entries(mock_upstream, fresh_caches):
+    payload = {
+        "host": "https://tilecache.rainviewer.com",
+        "radar": {
+            "past": [
+                {"time": 1000},  # missing "path"
+                {"time": 1600, "path": "/v2/radar/1600"},
+            ],
+            "nowcast": [],
+        },
+    }
+    mock_upstream(lambda req: httpx.Response(200, json=payload))
+    body = await radar.get_radar_frames()
+    assert [f.time for f in body.frames] == [1600]

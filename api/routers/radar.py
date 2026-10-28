@@ -21,9 +21,11 @@ async def _fetch_radar_frames() -> dict:
         resp = await client.get(url)
     resp.raise_for_status()
     data = resp.json()
+    past = data.get("radar", {}).get("past", [])
+    frames = [f for f in past if "time" in f and "path" in f]
     return {
         "host": data.get("host", ""),
-        "frames": data.get("radar", {}).get("past", []),
+        "frames": frames,
     }
 
 
