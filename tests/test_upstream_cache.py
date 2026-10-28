@@ -171,3 +171,21 @@ async def test_radar_drops_malformed_frame_entries(mock_upstream, fresh_caches):
     mock_upstream(lambda req: httpx.Response(200, json=payload))
     body = await radar.get_radar_frames()
     assert [f.time for f in body.frames] == [1600]
+
+
+async def test_radar_wrong_typed_value_falls_back_instead_of_500(mock_upstream, fresh_caches):
+    payload = {
+        "host": "https://tilecache.rainviewer.com",
+        "radar": {
+            "past": [
+                {"time": 1000, "path": "/v2/radar/1000"},
+                {"time": "abc", "path": "/p"},  # wrong type, keys present
+            ],
+            "nowcast": [],
+        },
+    }
+    mock_upstream(lambda req: httpx.Response(200, json=payload))
+    body = await radar.get_radar_frames()
+    assert body.frames == []
+    assert body.host == ""
+    assert radar._cache["data"] is None

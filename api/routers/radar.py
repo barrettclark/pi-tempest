@@ -35,7 +35,9 @@ async def get_radar_frames() -> RadarFramesResponse:
     if _cache["data"] is None or (now - _cache["fetched_at"]) > _CACHE_TTL:
         log.info("Refreshing radar frames cache...")
         try:
-            _cache["data"] = await _fetch_radar_frames()
+            fetched = await _fetch_radar_frames()
+            RadarFramesResponse(**fetched)  # raises if upstream reshaped something we can't model
+            _cache["data"] = fetched
             _cache["fetched_at"] = int(now)
         except httpx.HTTPStatusError as exc:
             log.error("Radar fetch failed: HTTP %d", exc.response.status_code)
