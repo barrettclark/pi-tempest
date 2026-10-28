@@ -1,4 +1,3 @@
-import inspect
 import time
 
 import httpx
@@ -192,10 +191,18 @@ async def test_radar_frames_with_no_host_falls_back_instead_of_caching(mock_upst
     assert radar._cache["data"] is None
 
 
-def test_radar_upstream_timeout_is_under_browser_deadline():
+async def test_radar_upstream_timeout_is_under_browser_deadline(fresh_caches, monkeypatch):
     # frontend's fetchJson() aborts after FETCH_TIMEOUT_MS = 8000; leave it headroom.
-    source = inspect.getsource(radar._fetch_radar_frames)
-    assert "timeout=6.0" in source
+    captured = {}
+
+    def spy(**kw):
+        captured.update(kw)
+        transport = httpx.MockTransport(lambda req: httpx.Response(200, json=_RADAR_OK))
+        return _REAL_ASYNC_CLIENT(transport=transport, **kw)
+
+    monkeypatch.setattr(httpx, "AsyncClient", spy)
+    await radar.get_radar_frames()
+    assert captured["timeout"] < 8.0
 
 
 async def test_radar_wrong_typed_value_falls_back_instead_of_500(mock_upstream, fresh_caches):

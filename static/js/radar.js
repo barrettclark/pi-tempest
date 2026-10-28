@@ -36,18 +36,23 @@ function buildTileUrl(frame) {
   return `${state.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
 }
 
-function swapRadarLayer(url) {
-  const nextIndex = activeRadarIndex === 0 ? 1 : 0;
-  const nextLayer = radarLayers[nextIndex];
-  const activeLayer = radarLayers[activeRadarIndex];
-
+function cancelPendingSwap() {
   if (radarSwapTimeoutId !== null) {
     clearTimeout(radarSwapTimeoutId);
     radarSwapTimeoutId = null;
   }
   if (radarSwapHandler !== null) {
-    nextLayer.off('load', radarSwapHandler);
+    radarLayers[activeRadarIndex === 0 ? 1 : 0].off('load', radarSwapHandler);
+    radarSwapHandler = null;
   }
+}
+
+function swapRadarLayer(url) {
+  const nextIndex = activeRadarIndex === 0 ? 1 : 0;
+  const nextLayer = radarLayers[nextIndex];
+  const activeLayer = radarLayers[activeRadarIndex];
+
+  cancelPendingSwap();
 
   radarSwapHandler = () => {
     nextLayer.off('load', radarSwapHandler);
@@ -66,14 +71,7 @@ function swapRadarLayer(url) {
 }
 
 function clearRadarLayer() {
-  if (radarSwapTimeoutId !== null) {
-    clearTimeout(radarSwapTimeoutId);
-    radarSwapTimeoutId = null;
-  }
-  if (radarSwapHandler !== null) {
-    radarLayers[activeRadarIndex === 0 ? 1 : 0].off('load', radarSwapHandler);
-    radarSwapHandler = null;
-  }
+  cancelPendingSwap();
   radarLayers.forEach((layer, i) => {
     layer.setUrl(BLANK_TILE_URL);
     layer.setOpacity(i === 0 ? RADAR_OPACITY : 0);
@@ -244,6 +242,7 @@ export function onRadarShown() {
 export function onRadarHidden() {
   loadSeq++; // invalidate any in-flight loadFrames() response so it can't resurrect playback
   stopAnimation();
+  cancelPendingSwap(); // don't let a mid-flight tile preload restyle the map after it's hidden
   if (pollTimerId !== null) {
     clearInterval(pollTimerId);
     pollTimerId = null;
