@@ -3,15 +3,24 @@ import { fetchJson } from './api.js';
 const CENTER = [32.97, -96.99]; // Coppell, TX — mirrors config.py's LAT/LON
 const ZOOM = 7; // RainViewer's radar tiles don't support zoom 8+ (served as a 200 OK "Zoom Level Not Supported" placeholder)
 
+const BLANK_TILE_URL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+const RADAR_OPACITY = 0.75;
+const SWAP_TIMEOUT_MS = 2000; // fallback if a preloaded frame's tiles never finish loading
+const NOW_RECENCY_SECONDS = 900; // only label the newest frame "now" if it's this fresh
+
 let map = null;
-let radarLayer = null;
+let radarLayers = []; // two-layer pool: one visible, one preloading the next frame
+let activeRadarIndex = 0;
+let radarSwapTimeoutId = null;
+let radarSwapHandler = null;
+
 let state = { host: '', frames: [], activeFrames: [], frameIndex: 0, playing: true };
 let activeRange = '2h';
 let pollTimerId = null;
 let animTimerId = null;
 let loadSeq = 0;
 
-const RANGE_FRAME_COUNTS = { '30m': 6, '1h': 12 }; // frames are ~10min apart; '2h' (or unknown) takes all
+const RANGE_SECONDS = { '30m': 1800, '1h': 3600 }; // frames are ~10min apart, but this filters by actual elapsed time; '2h' (or unknown) takes all
 
 const playBtn = document.getElementById('radar-play-btn');
 const trackFill = document.getElementById('radar-track-fill');
@@ -27,28 +36,90 @@ function buildTileUrl(frame) {
   return `${state.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
 }
 
+function swapRadarLayer(url) {
+  const nextIndex = activeRadarIndex === 0 ? 1 : 0;
+  const nextLayer = radarLayers[nextIndex];
+  const activeLayer = radarLayers[activeRadarIndex];
+
+  if (radarSwapTimeoutId !== null) {
+    clearTimeout(radarSwapTimeoutId);
+    radarSwapTimeoutId = null;
+  }
+  if (radarSwapHandler !== null) {
+    nextLayer.off('load', radarSwapHandler);
+  }
+
+  radarSwapHandler = () => {
+    nextLayer.off('load', radarSwapHandler);
+    radarSwapHandler = null;
+    clearTimeout(radarSwapTimeoutId);
+    radarSwapTimeoutId = null;
+    nextLayer.setOpacity(RADAR_OPACITY);
+    nextLayer.bringToFront();
+    activeLayer.setOpacity(0);
+    activeRadarIndex = nextIndex;
+  };
+
+  nextLayer.on('load', radarSwapHandler);
+  radarSwapTimeoutId = setTimeout(radarSwapHandler, SWAP_TIMEOUT_MS);
+  nextLayer.setUrl(url);
+}
+
+function clearRadarLayer() {
+  if (radarSwapTimeoutId !== null) {
+    clearTimeout(radarSwapTimeoutId);
+    radarSwapTimeoutId = null;
+  }
+  if (radarSwapHandler !== null) {
+    radarLayers[activeRadarIndex === 0 ? 1 : 0].off('load', radarSwapHandler);
+    radarSwapHandler = null;
+  }
+  radarLayers.forEach((layer, i) => {
+    layer.setUrl(BLANK_TILE_URL);
+    layer.setOpacity(i === 0 ? RADAR_OPACITY : 0);
+  });
+  activeRadarIndex = 0;
+}
+
 function renderFrame(frame) {
   if (!frame) return;
-  radarLayer.setUrl(buildTileUrl(frame));
+  swapRadarLayer(buildTileUrl(frame));
 }
 
 function sliceFrames(rangeKey) {
   activeRange = rangeKey;
-  const count = RANGE_FRAME_COUNTS[rangeKey];
-  state.activeFrames = count ? state.frames.slice(-count) : state.frames.slice();
-  state.frameIndex = 0;
+  const pausedFrame = !state.playing ? state.activeFrames[state.frameIndex] : null;
+
+  const seconds = RANGE_SECONDS[rangeKey];
+  if (seconds && state.frames.length > 0) {
+    const newestTime = state.frames[state.frames.length - 1].time;
+    state.activeFrames = state.frames.filter((f) => newestTime - f.time <= seconds);
+  } else {
+    state.activeFrames = state.frames.slice();
+  }
+
   stopAnimation();
 
   if (state.activeFrames.length === 0) {
+    state.frameIndex = 0;
     playBtn.disabled = true;
     trackFill.style.width = '0%';
     dot.style.left = '0%';
     frameTimeLabel.textContent = 'no data';
+    clearRadarLayer();
     return;
   }
 
   playBtn.disabled = false;
-  advanceFrame();
+
+  if (pausedFrame) {
+    const matchIndex = state.activeFrames.findIndex((f) => f.time === pausedFrame.time);
+    state.frameIndex = matchIndex !== -1 ? matchIndex : state.activeFrames.length - 1;
+    advanceFrame({ schedule: false });
+  } else {
+    state.frameIndex = 0;
+    advanceFrame();
+  }
 }
 
 function updatePlayButton() {
@@ -64,11 +135,15 @@ function advanceFrame({ schedule = true } = {}) {
   renderFrame(frame);
 
   const last = state.activeFrames.length - 1;
+  const newestFrame = state.activeFrames[last];
+  const isNewestRecent = Date.now() / 1000 - newestFrame.time <= NOW_RECENCY_SECONDS;
   const pct = last === 0 ? 0 : (state.frameIndex / last) * 100;
   trackFill.style.width = `${pct}%`;
   dot.style.left = `${pct}%`;
   frameTimeLabel.textContent =
-    state.frameIndex === last ? 'now' : new Date(frame.time * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    state.frameIndex === last && isNewestRecent
+      ? 'now'
+      : new Date(frame.time * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   if (!schedule || !state.playing) return;
 
@@ -109,6 +184,11 @@ async function loadFrames() {
     sliceFrames(activeRange);
   } catch (err) {
     console.error('Radar frames load error:', err);
+    if (seq !== loadSeq) return;
+    // no prior good data to fall back to (most likely the first load) — surface the "no data" state
+    if (state.frames.length === 0) {
+      sliceFrames(activeRange);
+    }
   }
 }
 
@@ -123,16 +203,22 @@ export function onRadarShown() {
       maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
       className: 'map-tiles-dark',
     }).addTo(map);
-    radarLayer = L.tileLayer('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', { opacity: 0.75 }).addTo(map);
+    radarLayers = [0, 1].map((i) =>
+      L.tileLayer(BLANK_TILE_URL, { opacity: i === 0 ? RADAR_OPACITY : 0 }).addTo(map)
+    );
+    activeRadarIndex = 0;
     L.circleMarker(CENTER, { radius: 5, color: '#00c8ff', fillColor: '#00c8ff', fillOpacity: 1, interactive: false }).addTo(map);
 
     const tileWarn = document.getElementById('radar-tile-warn');
-    const showWarn = () => tileWarn.classList.remove('hidden');
-    const hideWarn = () => tileWarn.classList.add('hidden');
+    let baseLayerFailing = false;
+    let radarLayerFailing = false;
+    const updateWarn = () => tileWarn.classList.toggle('hidden', !(baseLayerFailing || radarLayerFailing));
     // catches real network/DNS tile failures; RainViewer's "unsupported zoom" response is a 200 OK and won't trigger this
-    [baseLayer, radarLayer].forEach((layer) => {
-      layer.on('tileerror', showWarn);
-      layer.on('tileload', hideWarn);
+    baseLayer.on('tileerror', () => { baseLayerFailing = true; updateWarn(); });
+    baseLayer.on('tileload', () => { baseLayerFailing = false; updateWarn(); });
+    radarLayers.forEach((layer) => {
+      layer.on('tileerror', () => { radarLayerFailing = true; updateWarn(); });
+      layer.on('tileload', () => { radarLayerFailing = false; updateWarn(); });
     });
 
     playBtn.addEventListener('click', togglePlay);
@@ -156,6 +242,7 @@ export function onRadarShown() {
 }
 
 export function onRadarHidden() {
+  loadSeq++; // invalidate any in-flight loadFrames() response so it can't resurrect playback
   stopAnimation();
   if (pollTimerId !== null) {
     clearInterval(pollTimerId);
