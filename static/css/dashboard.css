@@ -253,6 +253,16 @@ html, body {
 
 .map-tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
 
+/* #radar-map's rounded corner clips Leaflet's default bottom-right attribution; inset it instead. */
+#radar-map .leaflet-control-attribution {
+  margin: 0 8px 8px 0;
+  background: rgba(6,15,28,0.75);
+  color: var(--text-dim);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+#radar-map .leaflet-control-attribution a { color: var(--text-dim); }
+
 .radar-tile-warn {
   position: absolute;
   top: 50%;
